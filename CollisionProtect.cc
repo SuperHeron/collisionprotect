@@ -28,9 +28,10 @@
 
 #include "pstream.h"
 
-#include "ContentsVisitorForIFL.hh"
+//#include "ContentsVisitorForIFL.hh"
 #include "ContentsVisitorForIPFL.hh"
 #include "CollisionProtect.hh"
+#include "OwnerFinder.hh"
 
 //const std::tr1::shared_ptr<const paludis::Sequence<std::string> > paludis_hook_auto_phases(const paludis::Environment *env)
 //{
@@ -165,7 +166,7 @@ bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
 //                std::cout << imgFS->first;
 //                if(imgFS->first.is_symbolic_link())
 //					std::cout << " -> " << imgFS->first.readlink();
-				std::cout << std::endl;
+//				std::cout << std::endl;
                 for(ContentsList::const_iterator pkgFS(pkgList.begin()), pkgFS_end(pkgList.end()); pkgFS != pkgFS_end; ++pkgFS)
                 {
                     if(imgFS->first.realpath_if_exists() == (*pkgFS)->location_key()->value().realpath_if_exists())
@@ -197,6 +198,50 @@ bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
         }
     }
 	return returnBool;
+}
+
+/**
+ * Find PackageID owner of a file
+ * @param env Environment
+ * @param fileName fileName to check
+ * @param collisions Collisions map
+ * @return whether file has found its owner or not
+ */
+bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPackage * collisions)
+{
+	bool found_owner = false;
+	for(paludis::PackageDatabase::RepositoryConstIterator r(env->package_database()->begin_repositories()), r_end(env->package_database()->end_repositories()); r != r_end; ++r)
+	{
+		paludis::SupportsActionTest<paludis::InstalledAction> action_test;
+		if((*r)->some_ids_might_support_action(action_test))
+		{
+			std::tr1::shared_ptr<const paludis::CategoryNamePartSet> cats((*r)->category_names());
+			for(paludis::CategoryNamePartSet::ConstIterator c(cats->begin()), c_end(cats->end()); c != c_end; ++c)
+			{
+				std::tr1::shared_ptr<const paludis::QualifiedPackageNameSet> pkgs((*r)->package_names(*c));
+				for(paludis::QualifiedPackageNameSet::ConstIterator p(pkgs->begin()), p_end(pkgs->end()); p != p_end; ++p)
+				{
+					std::tr1::shared_ptr<const paludis::PackageIDSequence> ids((*r)->package_ids(*p));
+					for(paludis::PackageIDSequence::ConstIterator v(ids->begin()), v_end(ids->end()); v != v_end; ++v)
+					{
+						if ((*v)->contents_key())
+						{
+							std::tr1::shared_ptr<const paludis::Contents> contents((*v)->contents_key()->value());
+							OwnerFinder finder(fileName, *v, collisions);
+							std::for_each(indirect_iterator(contents->begin()), indirect_iterator(contents->end()), paludis::accept_visitor(finder));
+							found_owner = finder.isFound();
+							if(found_owner)
+//							{
+//								std::cout << "File found : " << fileName << std::endl;
+								return found_owner;
+//							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return found_owner;
 }
 
 /**
@@ -269,13 +314,13 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
  * Getting files from currently installing package
  */
 //		std::cout << "Iterating over ${IMAGE} directory..." << std::endl;
-//		iterate_over_directory(hook.get("IMAGE"), hook.get("IMAGE"), &imageFileList, collIgnoreVector, root);
+		iterate_over_directory(hook.get("IMAGE"), hook.get("IMAGE"), &imageFileList, collIgnoreVector, root);
 //		for(FSEntryList::const_iterator fs(imageFileList.begin()), fs_end(imageFileList.end()); fs != fs_end; ++fs)
 //			std::cout << fs->first << std::endl;
 /*
  * Find installed package being replaced
  */
-//		std::cout << "Getting list of files of possibly old package version..." << std::endl;
+		std::cout << "Getting list of files of possibly old package version..." << std::endl;
 //		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldpkg((*env)[paludis::selection::BestVersionInEachSlot(paludis::generator::Package(packageName) | paludis::filter::SupportsAction<paludis::InstalledAction>())]);
 		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldpkg((*env)[paludis::selection::BestVersionInEachSlot(paludis::generator::Intersection(
 																													   paludis::generator::Package(packageName),
@@ -285,23 +330,6 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 		{
 			if((*p)->slot_key()->value() == slot)
 			{
-//				std::tr1::shared_ptr< const paludis::MetadataValueKey< std::tr1::shared_ptr<const paludis::Contents> > > key((*p)->contents_key());
-//				for(paludis::Contents::ConstIterator c(key->value()->begin()), c_end(key->value()->end()); c != c_end; ++c)
-//				{
-//					const paludis::ContentsFileEntry* file(paludis::visitor_cast<const paludis::ContentsFileEntry>(**c));
-//					if(file != NULL)
-//					{
-//						installedPkgFilesList.push_back(paludis::FSEntry(root, file->name()));
-//					}
-//					else
-//					{
-//						const paludis::ContentsSymEntry* sym(paludis::visitor_cast<const paludis::ContentsSymEntry>(**c));
-//						if(sym != NULL)
-//						{
-//							installedPkgFilesList.push_back(paludis::FSEntry(root, sym->name(), sym->target()));
-//						}
-//					}
-//				}
                 ContentsVisitorForIPFL visitor(hook.get("ROOT"), &installedPkgFilesList);
                 std::for_each(
                     paludis::indirect_iterator((*p)->contents_key()->value()->begin()),
@@ -348,141 +376,74 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 			}
 //			std::cout << "PkgID : " << packageID->canonical_form(paludis::idcf_full) << std::endl;
 /*
- * Getting all files from installed packages repository
- * Can take some time on big systems
+ * Find owners of existing files (this can take a while)
  */
-//			std::cout << "Getting list of installed packages and files..." << std::endl;
-			std::tr1::shared_ptr<const paludis::PackageIDSequence> pkgs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::All() | paludis::filter::SupportsAction<paludis::InstalledAction>())]);
-			for(paludis::PackageIDSequence::ConstIterator p(pkgs->begin()), p_end(pkgs->end()); p != p_end; ++p)
+			for(FSEntryList::iterator file(imageFileList.begin()), file_end(imageFileList.end()); file != file_end; ++file)
 			{
-				if((*p)->contents_key() != NULL)
+				if(file->second)
 				{
-//					std::tr1::shared_ptr< const paludis::MetadataValueKey< std::tr1::shared_ptr<const paludis::Contents> > > key((*p)->contents_key());
-//					for(paludis::Contents::ConstIterator c(key->value()->begin()), c_end(key->value()->end()); c != c_end; ++c)
-//					{
-//						const paludis::ContentsFileEntry* file(paludis::visitor_cast<const paludis::ContentsFileEntry>(**c));
-//						if(file != NULL)
-//						{
-//                            installedFilesList.insert(std::make_pair(paludis::FSEntry(root, file->name()), (*p)));
-//						}
-//						else
-//						{
-//							const paludis::ContentsSymEntry* sym(paludis::visitor_cast<const paludis::ContentsSymEntry>(**c));
-//							if(sym != NULL)
-//							{
-//								installedFilesList.insert(std::make_pair(paludis::FSEntry(root, sym->name(), sym->target()), (*p)));
-//							}
-//						}
-//					}
-                ContentsVisitorForIFL visitor(hook.get("ROOT"), &installedFilesList, *p);
-                std::for_each(
-                    paludis::indirect_iterator((*p)->contents_key()->value()->begin()),
-                    paludis::indirect_iterator((*p)->contents_key()->value()->end()),
-                    paludis::accept_visitor(visitor)
-                );
+					if(!find_owner(env, paludis::stringify(file->first), &collisions))
+					{
+//						std::cout << "File not found : " << file->first << std::endl;
+/*
+ * Add file to installing PackageID if orphaned
+ */
+						if(collisions.find(packageID) == collisions.end())
+						{
+							std::vector<paludis::FSEntry> vector;
+							vector.push_back(file->first);
+							collisions.insert(std::make_pair(packageID, vector));
+						}
+						else
+							collisions[packageID].push_back(file->first);
+					}
 				}
 			}
-/*
- * For each file that exists outside a COLLISION_IGNORE directory, see if another version is owned by another package or another slot of the same package
- * If we have found an orphaned file, we assign current installing packageID for distinguishing orphaned files
- */
-//			std::cout << "Assigning files to packages..." << std::endl;
-			for(FSEntryList::const_iterator file(imageFileList.begin()), file_end(imageFileList.end()); file != file_end; ++file)
-			{
-//			    std::cout << "FileName : " << file->first << " Exists : " << std::boolalpha << file->second << std::noboolalpha << std::endl;
-				if(file->second && !is_in_collision_ignore(file->first, collIgnoreVector))
-				{
-					paludis::FSEntry entry(root);
-					std::tr1::shared_ptr<paludis::ContentsEntry> contents;
-					if(file->first.is_symbolic_link())
-                        contents = std::tr1::shared_ptr<paludis::ContentsSymEntry>(new paludis::ContentsSymEntry(paludis::stringify(file->first), file->first.readlink()));
-                    else
-                        contents = std::tr1::shared_ptr<paludis::ContentsFileEntry>(new paludis::ContentsFileEntry(paludis::stringify(file->first)));
-					std::pair<FilesList::const_iterator, FilesList::const_iterator> range(installedFilesList.equal_range(contents));
-					std::tr1::shared_ptr<const paludis::PackageID> pkgID;
-					if(range.first != range.second && (packageID->name() != range.first->second->name() || (packageID->name() == range.first->second->name() && packageID->slot_key() != range.first->second->slot_key())))
-					{
-/*
- * Belongs to another package
- */
-// ADD OUTPUT
-//                        std::cout << "Other package : Old value of entry : " << entry;
-						pkgID = range.first->second;
-						entry = paludis::FSEntry(range.first->first->location_key()->value());
-//						std::cout << "\tNew value of entry : " << entry << std::endl;
-					}
-					else if(range.first == range.second)
-					{
-/*
- * Orphaned file (doesn't belong to any package)
- */
-// ADD OUTPUT
-//                        std::cout << "Orphaned file : Old value of entry : " << entry;
-						pkgID = packageID;
-						entry = file->first;
-//						std::cout << "\tNew value of entry : " << entry << std::endl;
-					}
-					if(collisions.find(pkgID) == collisions.end())
-					{
-						std::vector<paludis::FSEntry> vector;
-						vector.push_back(entry);
-						collisions.insert(std::make_pair(pkgID, vector));
-					}
-					else
-						collisions[pkgID].push_back(entry);
-				}
-			}
-		}
-//		std::cout << "List of files already installed by all packages..." << std::endl;
-//		for(FilesList::const_iterator file(installedFilesList.begin()), file_end(installedFilesList.end()); file != file_end; file++)
-//		{
-//		    std::cout << file->first << " : " << file->second->name() << std::endl;
-//		}
 /*
  * Show each package and files involved in collision and abort installation
  */
-//		for(FilesByPackage::iterator file(collisions.begin()), file_end(collisions.end()); file != file_end; ++file)
-//		{
-//            for(std::vector<paludis::FSEntry>::iterator fs(file->second.begin()), fs_end(file->second.end()); fs != fs_end; ++fs)
-//            {
-//                if(fs->getFileName() == root)
-//                    file->second.erase(fs);
-//            }
-//            if(file->second.empty())
-//                collisions.erase(file);
-//		}
-		std::cout << "Detected collisions :" << std::endl;
-		for(FilesByPackage::const_iterator file(collisions.begin()), file_end(collisions.end()); file != file_end; ++file)
-		{
-			if(file->first == NULL)
-				std::cout << "	Other version of " << packageID->name() << " :" << std::endl;
-			else if(file->first == packageID)
-				std::cout << "	Orphaned files :" << std::endl;
-			else
-				std::cout << "	" << file->first->canonical_form(paludis::idcf_full) << " :" << std::endl;
-			for(std::vector<paludis::FSEntry>::const_iterator fs(file->second.begin()), fs_end(file->second.end()); fs != fs_end; ++fs)
+//			for(FilesByPackage::iterator file(collisions.begin()), file_end(collisions.end()); file != file_end; ++file)
+//			{
+//				for(std::vector<paludis::FSEntry>::iterator fs(file->second.begin()), fs_end(file->second.end()); fs != fs_end; ++fs)
+//				{
+//					if(fs->getFileName() == root)
+//						file->second.erase(fs);
+//				}
+//				if(file->second.empty())
+//					collisions.erase(file);
+			std::cout << "Detected collisions :" << std::endl;
+			for(FilesByPackage::const_iterator file(collisions.begin()), file_end(collisions.end()); file != file_end; ++file)
 			{
-				std::cout << "		" << *fs;
-				if(fs->is_symbolic_link())
-                    std::cout << " -> " << fs->readlink();
-				std::cout << std::endl;
+				if(file->first == NULL)
+					std::cout << "	Other version of " << packageID->name() << " :" << std::endl;
+				else if(file->first == packageID)
+					std::cout << "	Orphaned files :" << std::endl;
+				else
+					std::cout << "	" << file->first->canonical_form(paludis::idcf_full) << " :" << std::endl;
+				for(std::vector<paludis::FSEntry>::const_iterator fs(file->second.begin()), fs_end(file->second.end()); fs != fs_end; ++fs)
+				{
+					std::cout << "		" << *fs;
+					if(fs->is_symbolic_link())
+						std::cout << " -> " << fs->readlink();
+					std::cout << std::endl;
+				}
 			}
+//			std::cout << "Collisions with installing files :" << std::endl;
+//			for(FSEntryList::const_iterator entry(imageFileList.begin()), entry_end(imageFileList.end()); entry != entry_end; ++entry)
+//			{
+//				if(entry->second)
+//				{
+//					std::cout << "  " << entry->first;
+//					if(entry->first.is_symbolic_link())
+//						std::cout << " -> " << entry->first.readlink();
+//					std::cout << std::endl;
+//				}
+//			}
+			std::string message("Collisions detected, aborting");
+			std::cout << message << std::endl;
+			result.max_exit_status = paludis::value_for<paludis::n::max_exit_status>(1);
+			result.output = paludis::value_for<paludis::n::output>(message);
+			return result;
 		}
-//		std::cout << "Collisions with installing files :" << std::endl;
-//		for(FSEntryList::const_iterator entry(imageFileList.begin()), entry_end(imageFileList.end()); entry != entry_end; ++entry)
-//		{
-//		    if(entry->second)
-//		    {
-//                std::cout << "  " << entry->first;
-//                if(entry->first.is_symbolic_link())
-//                    std::cout << " -> " << entry->first.readlink();
-//                std::cout << std::endl;
-//		    }
-//		}
-		std::string message("Collisions detected, aborting");
-		std::cout << message << std::endl;
-		result.max_exit_status = paludis::value_for<paludis::n::max_exit_status>(1);
-		result.output = paludis::value_for<paludis::n::output>(message);
-        return result;
 	}
 }
