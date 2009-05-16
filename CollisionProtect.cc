@@ -321,11 +321,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
  * Find installed package being replaced
  */
 //		std::cout << "Getting list of files of possibly old package version..." << std::endl;
-//		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldpkg((*env)[paludis::selection::BestVersionInEachSlot(paludis::generator::Package(packageName) | paludis::filter::SupportsAction<paludis::InstalledAction>())]);
-		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldpkg((*env)[paludis::selection::BestVersionInEachSlot(paludis::generator::Intersection(
-																													   paludis::generator::Package(packageName),
-																													   paludis::generator::InRepository(paludis::RepositoryName("installed"))
-																													   ))]);
+		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldpkg((*env)[paludis::selection::BestVersionInEachSlot(paludis::generator::Package(packageName) | paludis::filter::SupportsAction<paludis::InstalledAction>())]);
 		for(paludis::PackageIDSequence::ConstIterator p(oldpkg->begin()), p_end(oldpkg->end()); p != p_end; ++p)
 		{
 			if((*p)->slot_key()->value() == slot)
