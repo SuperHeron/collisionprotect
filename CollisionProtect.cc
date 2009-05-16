@@ -141,6 +141,26 @@ void fill_collision_ignore_with_variable(std::vector<std::string> *vector, std::
 }
 
 /**
+ * Find out GCC DataInfoDir
+ * @return GCC DataInfoDir
+ */
+std::string findGccDataInfoDir()
+{
+	std::string gccMachine;
+	std::string gccVersion;
+	paludis::FSEntry gccDataInfoDir("/usr/share/gcc-data");
+	redi::ipstream cmd_ss("gcc -dumpmachine");
+	getline(cmd_ss, gccMachine);
+	redi::ipstream cmd_ss2("gcc -dumpversion");
+	getline(cmd_ss2, gccVersion);
+	gccDataInfoDir /= gccMachine;
+	gccDataInfoDir /= gccVersion;
+	gccDataInfoDir /= "info";
+//	std::cout << gccDataInfoDir << std::endl;
+	return gccDataInfoDir.exists() ? paludis::stringify(gccDataInfoDir) : "";
+}
+
+/**
  * Compare ${IMAGE} files list with installed package files list
  * @param imageList ${IMAGE} files list
  * @param pkgList installed package files list
@@ -306,11 +326,9 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 		fill_collision_ignore_with_variable(&collIgnoreVector, hook.get("CONFIG_PROTECT_MASK"));
 		fill_collision_ignore_with_variable(&collIgnoreVector, hook.get("CONFIG_PROTECT"));
 		fill_collision_ignore_with_variable(&collIgnoreVector, "/usr/share/info/dir");
-		std::string cmd("echo `find /usr/share/gcc-data/ -iname info -type d`/dir");
-		std::string gccDataInfoDir;
-		redi::ipstream cmd_ss(cmd);
-		getline(cmd_ss, gccDataInfoDir);
-		fill_collision_ignore_with_variable(&collIgnoreVector, gccDataInfoDir);
+		std::string gccDataInfoDir = findGccDataInfoDir();
+		if(!gccDataInfoDir.empty())
+			fill_collision_ignore_with_variable(&collIgnoreVector, gccDataInfoDir + "/dir");
 //		for(std::vector<std::string>::const_iterator cIVit(collIgnoreVector.begin()), cIVit_end(collIgnoreVector.end()); cIVit != cIVit_end; ++cIVit)
 //            std::cout << *cIVit << std::endl;
         FilesList installedFilesList;
