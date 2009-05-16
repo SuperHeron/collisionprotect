@@ -245,6 +245,19 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 }
 
 /**
+ * Check whether an installed PackageID has a contents file
+ * @param pkgID PackageID to check
+ * @return whether the contents file exists
+ **/
+bool pkgID_has_contents_file(const std::tr1::shared_ptr<const paludis::PackageID>& pkgID)
+{
+	paludis::FSEntry vdb_dir(pkgID->fs_location_key()->value());
+	paludis::FSEntry contents_lower(vdb_dir / "contents");
+	paludis::FSEntry contents_upper(vdb_dir / "CONTENTS");
+	return (contents_lower.exists() || contents_upper.exists());
+}
+
+/**
  * Function to run the current hook (declared in Paludis API)
  */
 paludis::HookResult paludis_hook_run(const paludis::Environment* env, const paludis::Hook& hook)
@@ -311,6 +324,20 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 		std::tr1::shared_ptr<const paludis::PackageID> packageID;
 		std::cout << "Checking for collisions..." << std::endl;
 /*
+ * Make packageID from CATEGORY, PN, PVR and SLOT and look for original repository
+ */
+//		std::cout << "Creating PackageID..." << std::endl;
+		for(paludis::PackageDatabase::RepositoryConstIterator r(env->package_database()->begin_repositories()), r_end(env->package_database()->end_repositories()); r != r_end; ++r)
+		{
+			std::tr1::shared_ptr<const paludis::PackageIDSequence> pkgs_from_repo((*r)->package_ids(packageName));
+			for(paludis::PackageIDSequence::ConstIterator id(pkgs_from_repo->begin()), id_end(pkgs_from_repo->end()); id != id_end; ++id)
+			{
+				if((*id)->version() == version && (*id)->slot_key()->value() == slot)
+					packageID = *id;
+			}
+		}
+//		std::cout << "PkgID : " << packageID->canonical_form(paludis::idcf_full) << std::endl;
+/*
  * Getting files from currently installing package
  */
 //		std::cout << "Iterating over ${IMAGE} directory..." << std::endl;
@@ -321,18 +348,35 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
  * Find installed package being replaced
  */
 //		std::cout << "Getting list of files of possibly old package version..." << std::endl;
-		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldpkg((*env)[paludis::selection::BestVersionInEachSlot(paludis::generator::Package(packageName) | paludis::filter::SupportsAction<paludis::InstalledAction>())]);
-		for(paludis::PackageIDSequence::ConstIterator p(oldpkg->begin()), p_end(oldpkg->end()); p != p_end; ++p)
+		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Package(packageName) | paludis::filter::And(paludis::filter::SupportsAction<paludis::InstalledAction>(), paludis::filter::SameSlot(packageID)))]);
+		int oldPkgCount = 0;
+		std::tr1::shared_ptr<const paludis::PackageID> oldPkgId;
+/*
+ * Counting the number of found pkgIDs
+ */
+		for(paludis::PackageIDSequence::ConstIterator p(oldPkgSeq->begin()), p_end(oldPkgSeq->end()); p != p_end; ++p)
+			oldPkgCount++;
+/*
+ * Retrieving the correct pkgID
+ * If 1 pkgID is found or if severals pkgIDs are found but have a different version, take the greatest
+ */
+		for(paludis::PackageIDSequence::ConstIterator p(oldPkgSeq->begin()), p_end(oldPkgSeq->end()); p != p_end; ++p)
 		{
-			if((*p)->slot_key()->value() == slot)
+			if(oldPkgCount == 1 || (oldPkgCount > 1 && (*p)->version().compare(packageID->version()) != 0))
 			{
-                ContentsVisitorForIPFL visitor(hook.get("ROOT"), &installedPkgFilesList);
-                std::for_each(
-                    paludis::indirect_iterator((*p)->contents_key()->value()->begin()),
-                    paludis::indirect_iterator((*p)->contents_key()->value()->end()),
-                    paludis::accept_visitor(visitor)
-                );
+				if(pkgID_has_contents_file(*p) && (oldPkgId == NULL || oldPkgId->version() < (*p)->version()))
+					oldPkgId = *p;
 			}
+		}
+		if(oldPkgId)
+		{
+//			std::cout << oldPkgId->canonical_form(paludis::idcf_full) << std::endl;
+			ContentsVisitorForIPFL visitor(hook.get("ROOT"), &installedPkgFilesList);
+			std::for_each(
+				paludis::indirect_iterator(oldPkgId->contents_key()->value()->begin()),
+				paludis::indirect_iterator(oldPkgId->contents_key()->value()->end()),
+				paludis::accept_visitor(visitor)
+			);
 		}
 //		std::cout << "List of files already installed by other version of package..." << std::endl;
 //		for(ContentsList::const_iterator file(installedPkgFilesList.begin()), file_end(installedPkgFilesList.end()); file != file_end; file++)
@@ -356,21 +400,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 		}
 		else
 		{
-/*
- * Make packageID from CATEGORY, PN, PVR and SLOT and look for original repository
- */
 			std::cout << "Collisions detected, please wait..." << std::endl;
-//			std::cout << "Creating PackageID..." << std::endl;
-			for(paludis::PackageDatabase::RepositoryConstIterator r(env->package_database()->begin_repositories()), r_end(env->package_database()->end_repositories()); r != r_end; ++r)
-			{
-				std::tr1::shared_ptr<const paludis::PackageIDSequence> pkgs_from_repo((*r)->package_ids(packageName));
-				for(paludis::PackageIDSequence::ConstIterator id(pkgs_from_repo->begin()), id_end(pkgs_from_repo->end()); id != id_end; ++id)
-				{
-					if((*id)->version() == version && (*id)->slot_key()->value() == slot)
-						packageID = *id;
-				}
-			}
-//			std::cout << "PkgID : " << packageID->canonical_form(paludis::idcf_full) << std::endl;
 /*
  * Find owners of existing files (this can take a while)
  */
