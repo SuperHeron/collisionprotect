@@ -298,6 +298,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 	std::cout << std::endl;
 //	std::cout << "Checking contents of ${COLLISION_IGNORE}..." << std::endl;
 	std::string collisionIgnore = get_envvar_from_bashrc(hook, "COLLISION_IGNORE");
+//	std::cout << "COLLISION_IGNORE : " << collisionIgnore << std::endl;
 	std::istringstream collIgnore_iss(collisionIgnore);
 	std::string root = hook.get("ROOT");
 	bool canIgnore = false;
@@ -339,6 +340,8 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 		paludis::VersionSpecOptions vso;
 		paludis::VersionSpec version(hook.get("PVR"), vso);
 		paludis::SlotName slot(hook.get("SLOT"));
+		const paludis::RepositoryName installed_unpackaged_repo("installed-unpackaged"), unpackaged_repo("unpackaged");
+		paludis::RepositoryName destination_repo("installed");
 		std::tr1::shared_ptr<const paludis::PackageID> packageID;
 		std::cout << "Checking for collisions..." << std::endl;
 /*
@@ -366,7 +369,16 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
  * Find installed package being replaced
  */
 //		std::cout << "Getting list of files of possibly old package version..." << std::endl;
-		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Package(packageName) | paludis::filter::And(paludis::filter::SupportsAction<paludis::InstalledAction>(), paludis::filter::SameSlot(packageID)))]);
+		if(packageID->repository()->name() == unpackaged_repo)
+			destination_repo = installed_unpackaged_repo;
+//		std::cout << "Destination repo: " << destination_repo << std::endl;
+		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Intersection(
+																					paludis::generator::Package(packageName),
+																					paludis::generator::InRepository(destination_repo)) |
+																				paludis::filter::And(
+																					paludis::filter::SupportsAction<paludis::InstalledAction>(),
+																					paludis::filter::SameSlot(packageID)
+																				))]);
 		int oldPkgCount = 0;
 		std::tr1::shared_ptr<const paludis::PackageID> oldPkgId;
 /*
@@ -460,7 +472,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 			{
 				if(file->first == NULL)
 					std::cout << "	Other version of " << packageID->name() << " :" << std::endl;
-				else if(file->first == packageID)
+				else if(file->first == packageID && file->first->repository()->name() == destination_repo)
 					std::cout << "	Orphaned files :" << std::endl;
 				else
 					std::cout << "	" << file->first->canonical_form(paludis::idcf_full) << " :" << std::endl;
