@@ -20,6 +20,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <paludis/util/stringify.hh>
+
 #include "ContentsVisitorForIPFL.hh"
 
 ContentsVisitorForIPFL::ContentsVisitorForIPFL(std::string root, ContentsList* ipfl)
@@ -38,7 +40,7 @@ ContentsVisitorForIPFL::ContentsVisitorForIPFL(std::string root, ContentsList* i
 
 void ContentsVisitorForIPFL::visit(const paludis::ContentsFileEntry & d)
 {
-    this->ipfl->push_back(std::tr1::shared_ptr<paludis::ContentsEntry>(new paludis::ContentsFileEntry(d.location_key()->value())));
+	this->ipfl->insert(std::make_pair(paludis::stringify(d.location_key()->value()), std::tr1::shared_ptr<paludis::ContentsEntry>(new paludis::ContentsFileEntry(d.location_key()->value()))));
 }
 
 void ContentsVisitorForIPFL::visit(const paludis::ContentsDirEntry & d)
@@ -55,5 +57,5 @@ void ContentsVisitorForIPFL::visit(const paludis::ContentsOtherEntry & d)
 
 void ContentsVisitorForIPFL::visit(const paludis::ContentsSymEntry & d)
 {
-    this->ipfl->push_back(std::tr1::shared_ptr<paludis::ContentsEntry>(new paludis::ContentsSymEntry(d.location_key()->value(), d.target_key()->value())));
+	this->ipfl->insert(std::make_pair(paludis::stringify(d.location_key()->value()), std::tr1::shared_ptr<paludis::ContentsEntry>(new paludis::ContentsSymEntry(d.location_key()->value(), d.target_key()->value()))));
 }

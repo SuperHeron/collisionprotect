@@ -35,7 +35,7 @@ OwnerFinder::OwnerFinder(std::string fileToFind, const std::tr1::shared_ptr<cons
 
 void OwnerFinder::find(const paludis::FSEntry & fsEntry)
 {
-	if(fileToFind == paludis::stringify(fsEntry))
+	if(this->fileToFind == paludis::stringify(fsEntry))
 	{
 		this->found = true;
 		FilesByPackage::iterator fbpIt = this->collisions->find(this->pkgID);

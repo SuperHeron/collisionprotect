@@ -187,12 +187,14 @@ bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
 //                if(imgFS->first.is_symbolic_link())
 //					std::cout << " -> " << imgFS->first.readlink();
 //				std::cout << std::endl;
-                for(ContentsList::const_iterator pkgFS(pkgList.begin()), pkgFS_end(pkgList.end()); pkgFS != pkgFS_end; ++pkgFS)
+				ContentsList::const_iterator pkgFS = pkgList.find(imgFS->first);
+//				std::cout << imgFS->first << " (" << std::boolalpha << (pkgFS != pkgList.end()) << std::noboolalpha << ")" << std::endl;
+				if(pkgFS != pkgList.end())
                 {
-                    if(imgFS->first.realpath_if_exists() == (*pkgFS)->location_key()->value().realpath_if_exists())
+                    if(imgFS->first.realpath_if_exists() == pkgFS->second->location_key()->value().realpath_if_exists())
                     {
-//						std::cout << "Found file : " << (*pkgFS)->location_key()->value();
-                        std::tr1::shared_ptr<paludis::ContentsSymEntry> cse(std::tr1::dynamic_pointer_cast<paludis::ContentsSymEntry>(*pkgFS));
+//						std::cout << "Found file : " << pkgFS->second->location_key()->value();
+                        std::tr1::shared_ptr<paludis::ContentsSymEntry> cse(std::tr1::dynamic_pointer_cast<paludis::ContentsSymEntry>(pkgFS->second));
                         if(cse && imgFS->first.is_symbolic_link())
                         {
 //							std::cout << " -> " << cse->target_key()->value();
@@ -209,15 +211,31 @@ bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
 						}
 //						std::cout << std::endl;
                     }
-                    if(isInPkg)
-                        break;
+//                    if(isInPkg)
+//                        break;
                 }
+//				else
+//					std::cout << "File not found : " << imgFS->first << std::endl;
                 if(!isInPkg)
                     returnBool = false;
             }
         }
     }
 	return returnBool;
+}
+
+/**
+ * Check whether an installed PackageID has a contents file
+ * @param pkgID PackageID to check
+ * @return whether the contents file exists
+ **/
+bool pkgID_has_contents_file(const std::tr1::shared_ptr<const paludis::PackageID>& pkgID)
+{
+	paludis::FSEntry vdb_dir(pkgID->fs_location_key()->value());
+	paludis::FSEntry contents_lower(vdb_dir / "contents");
+	paludis::FSEntry contents_upper(vdb_dir / "CONTENTS");
+//	std::cout << pkgID->canonical_form(paludis::idcf_full) << "(" << std::boolalpha << (contents_lower.exists() || contents_upper.exists()) << std::noboolalpha << ")" << std::endl;
+	return (contents_lower.exists() || contents_upper.exists());
 }
 
 /**
@@ -244,16 +262,17 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 					std::tr1::shared_ptr<const paludis::PackageIDSequence> ids((*r)->package_ids(*p));
 					for(paludis::PackageIDSequence::ConstIterator v(ids->begin()), v_end(ids->end()); v != v_end; ++v)
 					{
-						if ((*v)->contents_key())
+//						std::cout << (*v)->canonical_form(paludis::idcf_full) << std::endl;
+						if((*v)->contents_key() && pkgID_has_contents_file(*v))
 						{
+//							std::cout << "Contents found at :" << (*v)->fs_location_key()->value() << std::endl;
 							std::tr1::shared_ptr<const paludis::Contents> contents((*v)->contents_key()->value());
 							OwnerFinder finder(fileName, *v, collisions);
 							std::for_each(indirect_iterator(contents->begin()), indirect_iterator(contents->end()), paludis::accept_visitor(finder));
 							found_owner = finder.isFound();
-							if(found_owner)
+//							if(found_owner)
 //							{
 //								std::cout << "File found : " << fileName << std::endl;
-								return found_owner;
 //							}
 						}
 					}
@@ -261,20 +280,9 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 			}
 		}
 	}
+//	if(!found_owner)
+//		std::cout << "File not found : " << fileName << std::endl;
 	return found_owner;
-}
-
-/**
- * Check whether an installed PackageID has a contents file
- * @param pkgID PackageID to check
- * @return whether the contents file exists
- **/
-bool pkgID_has_contents_file(const std::tr1::shared_ptr<const paludis::PackageID>& pkgID)
-{
-	paludis::FSEntry vdb_dir(pkgID->fs_location_key()->value());
-	paludis::FSEntry contents_lower(vdb_dir / "contents");
-	paludis::FSEntry contents_upper(vdb_dir / "CONTENTS");
-	return (contents_lower.exists() || contents_upper.exists());
 }
 
 /**
