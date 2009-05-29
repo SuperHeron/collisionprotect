@@ -179,40 +179,24 @@ bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
 			count++;
 			if(count > 0 && count % 500 == 0)
 				std::cout << "...on " << count << "th target..." << std::endl;
-        // For all files that exists
+			// For all files that exists
             if(imgFS->second)
             {
                 bool isInPkg = false;
-//                std::cout << imgFS->first;
-//                if(imgFS->first.is_symbolic_link())
+//				std::cout << imgFS->first.realpath_if_exists();
+//				if(imgFS->first.is_symbolic_link())
 //					std::cout << " -> " << imgFS->first.readlink();
 //				std::cout << std::endl;
-				ContentsList::const_iterator pkgFS = pkgList.find(imgFS->first);
-//				std::cout << imgFS->first << " (" << std::boolalpha << (pkgFS != pkgList.end()) << std::noboolalpha << ")" << std::endl;
+				ContentsList::const_iterator pkgFS = find(pkgList.begin(), pkgList.end(), imgFS->first.realpath_if_exists());
+//				std::cout << imgFS->first.realpath_if_exists() << " (" << std::boolalpha << (pkgFS != pkgList.end()) << std::noboolalpha << ")" << std::endl;
 				if(pkgFS != pkgList.end())
                 {
-                    if(imgFS->first.realpath_if_exists() == pkgFS->second->location_key()->value().realpath_if_exists())
+                    if(imgFS->first.realpath_if_exists() == pkgFS->realpath_if_exists())
                     {
-//						std::cout << "Found file : " << pkgFS->second->location_key()->value();
-                        std::tr1::shared_ptr<paludis::ContentsSymEntry> cse(std::tr1::dynamic_pointer_cast<paludis::ContentsSymEntry>(pkgFS->second));
-                        if(cse && imgFS->first.is_symbolic_link())
-                        {
-//							std::cout << " -> " << cse->target_key()->value();
-                            if(canonicalize_path(imgFS->first.readlink()) == canonicalize_path(cse->target_key()->value()))
-                            {
-                                imgFS->second = false;
-                                isInPkg = true;
-                            }
-                        }
-                        else if(!cse && !imgFS->first.is_symbolic_link())
-                        {
-                            imgFS->second = false;
-                            isInPkg = true;
-						}
-//						std::cout << std::endl;
+//						std::cout << "Found file : " << pkgFS->realpath_if_exists() << std::endl;
+						imgFS->second = false;
+						isInPkg = true;
                     }
-//                    if(isInPkg)
-//                        break;
                 }
 //				else
 //					std::cout << "File not found : " << imgFS->first << std::endl;
@@ -270,10 +254,11 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 							OwnerFinder finder(fileName, *v, collisions);
 							std::for_each(indirect_iterator(contents->begin()), indirect_iterator(contents->end()), paludis::accept_visitor(finder));
 							found_owner = finder.isFound();
-//							if(found_owner)
-//							{
+							if(found_owner)
+							{
 //								std::cout << "File found : " << fileName << std::endl;
-//							}
+								return found_owner;
+							}
 						}
 					}
 				}
@@ -419,11 +404,11 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 //		std::cout << "List of files already installed by other version of package..." << std::endl;
 //		for(ContentsList::const_iterator file(installedPkgFilesList.begin()), file_end(installedPkgFilesList.end()); file != file_end; file++)
 //		{
-//		    std::cout << (*file)->location_key()->value();
-//            std::tr1::shared_ptr<paludis::ContentsSymEntry> cse(std::tr1::dynamic_pointer_cast<paludis::ContentsSymEntry>(*file));
+//		    std::cout << file->second->location_key()->value();
+//            std::tr1::shared_ptr<paludis::ContentsSymEntry> cse(std::tr1::dynamic_pointer_cast<paludis::ContentsSymEntry>(file->second));
 //            if(cse)
 //                std::cout << " -> " << cse->target_key()->value();
-//            std::cout << " (" << typeid(*file).name() << ")" << std::endl;
+//            std::cout << " (" << typeid(file->second).name() << ")" << std::endl;
 //		}
 /*
  * If there are no files involved in collision in IMAGE, tell the user that everything is OK
