@@ -330,24 +330,26 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
  		FSEntryList imageFileList;
 		FilesByPackage collisions;
 		paludis::QualifiedPackageName packageName(paludis::CategoryNamePart(hook.get("CATEGORY")), paludis::PackageNamePart(hook.get("PN")));
-		paludis::VersionSpecOptions vso;
-		paludis::VersionSpec version(hook.get("PVR"), vso);
 		paludis::SlotName slot(hook.get("SLOT"));
 		const paludis::RepositoryName installed_unpackaged_repo("installed-unpackaged"), unpackaged_repo("unpackaged");
 		paludis::RepositoryName destination_repo("installed");
 		std::tr1::shared_ptr<const paludis::PackageID> packageID;
 		std::cout << "Checking for collisions..." << std::endl;
 /*
- * Make packageID from CATEGORY, PN, PVR and SLOT and look for original repository
+ * Make packageID from CATEGORY, PN, PVR and SLOT
  */
 //		std::cout << "Creating PackageID..." << std::endl;
-		for(paludis::PackageDatabase::RepositoryConstIterator r(env->package_database()->begin_repositories()), r_end(env->package_database()->end_repositories()); r != r_end; ++r)
+		paludis::PackageDepSpec depSpec = paludis::make_package_dep_spec(paludis::PartiallyMadePackageDepSpecOptions()).package(packageName).in_repository(destination_repo).to_package_dep_spec();
+		std::tr1::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(depSpec, paludis::MatchPackageOptions()) |
+																				paludis::filter::And(
+																					paludis::filter::SupportsAction<paludis::InstalledAction>(),
+																					paludis::filter::Slot(slot)))]);
+		for(paludis::PackageIDSequence::ConstIterator id(pkgIDs->begin()), id_end(pkgIDs->end()); id != id_end; ++id)
 		{
-			std::tr1::shared_ptr<const paludis::PackageIDSequence> pkgs_from_repo((*r)->package_ids(packageName));
-			for(paludis::PackageIDSequence::ConstIterator id(pkgs_from_repo->begin()), id_end(pkgs_from_repo->end()); id != id_end; ++id)
+			if(hook.get("PVR") == paludis::stringify((*id)->version()))
 			{
-				if((*id)->version() == version && (*id)->slot_key()->value() == slot)
-					packageID = *id;
+				packageID = (*id);
+				break;
 			}
 		}
 //		std::cout << "PkgID : " << packageID->canonical_form(paludis::idcf_full) << std::endl;
@@ -361,9 +363,9 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 /*
  * Find installed package being replaced
  */
-//		std::cout << "Getting list of files of possibly old package version..." << std::endl;
-		if(packageID->repository()->name() == unpackaged_repo)
-			destination_repo = installed_unpackaged_repo;
+		std::cout << "Getting list of files of possibly old package version..." << std::endl;
+//		if(packageID->repository()->name() == unpackaged_repo)
+//			destination_repo = installed_unpackaged_repo;
 //		std::cout << "Destination repo: " << destination_repo << std::endl;
 		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Intersection(
 																					paludis::generator::Package(packageName),
