@@ -363,7 +363,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 /*
  * Find installed package being replaced
  */
-		std::cout << "Getting list of files of possibly old package version..." << std::endl;
+//		std::cout << "Getting list of files of possibly old package version..." << std::endl;
 //		if(packageID->repository()->name() == unpackaged_repo)
 //			destination_repo = installed_unpackaged_repo;
 //		std::cout << "Destination repo: " << destination_repo << std::endl;
