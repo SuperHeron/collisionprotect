@@ -25,10 +25,10 @@
 
 #include "OwnerFinder.hh"
 
-OwnerFinder::OwnerFinder(std::string fileToFind, const std::tr1::shared_ptr<const paludis::PackageID> & pkgID, FilesByPackage * collisions)
+OwnerFinder::OwnerFinder(std::string fileToFind, const std::tr1::shared_ptr<const paludis::PackageDepSpec> & depSpec, FilesByPackage * collisions)
 {
     this->fileToFind = fileToFind;
-    this->pkgID = pkgID;
+    this->depSpec = depSpec;
     this->collisions = collisions;
     this->found = false;
 }
@@ -38,12 +38,12 @@ void OwnerFinder::find(const paludis::FSEntry & fsEntry)
 	if(this->fileToFind == paludis::stringify(fsEntry))
 	{
 		this->found = true;
-		FilesByPackage::iterator fbpIt = this->collisions->find(this->pkgID);
+		FilesByPackage::iterator fbpIt = this->collisions->find(this->depSpec);
 		if(fbpIt == this->collisions->end())
 		{
 			std::vector<paludis::FSEntry> vector;
 			vector.push_back(fsEntry);
-			this->collisions->insert(std::make_pair(this->pkgID, vector));
+			this->collisions->insert(std::make_pair(this->depSpec, vector));
 		}
 		else
 			fbpIt->second.push_back(fsEntry);

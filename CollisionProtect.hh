@@ -36,7 +36,7 @@
 //typedef std::multimap<paludis::FSEntry, std::tr1::shared_ptr<const paludis::PackageID> > FilesList;
 typedef std::multimap<std::tr1::shared_ptr<paludis::ContentsEntry>, std::tr1::shared_ptr<const paludis::PackageID> > FilesList;
 typedef std::map<paludis::FSEntry, bool> FSEntryList;
-typedef std::map<std::tr1::shared_ptr<const paludis::PackageID>, std::vector<paludis::FSEntry> > FilesByPackage;
+typedef std::map<std::tr1::shared_ptr<const paludis::PackageDepSpec>, std::vector<paludis::FSEntry> > FilesByPackage;
 typedef std::vector<paludis::FSEntry> ContentsList;
 
 #endif // __COLLISION_PROTECT_HH__
