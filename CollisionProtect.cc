@@ -309,7 +309,6 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 			fill_collision_ignore_with_variable(&collIgnoreVector, gccDataInfoDir + "/dir");
 //		for(std::vector<std::string>::const_iterator cIVit(collIgnoreVector.begin()), cIVit_end(collIgnoreVector.end()); cIVit != cIVit_end; ++cIVit)
 //            std::cout << *cIVit << std::endl;
-        FilesList installedFilesList;
         ContentsList installedPkgFilesList;
  		FSEntryList imageFileList;
 		FilesByPackage collisions;
@@ -351,62 +350,63 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 				break;
 			}
 		}
-		if(packageID)
-		{
+//		if(packageID)
+//		{
 //			std::cout << "PkgID : " << packageID->canonical_form(paludis::idcf_full) << std::endl;
+//		}
 /*
  * Find installed package being replaced
  */
-//			std::cout << "Getting list of files of possibly old package version..." << std::endl;
-			std::ostringstream oldDepSpecStr;
-			oldDepSpecStr << hook.get("CATEGORY") << "/" << hook.get("PN") << ":" << hook.get("SLOT") << "::" << destination_repo.data();
-			oldDepSpec = std::tr1::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(paludis::parse_user_package_dep_spec(oldDepSpecStr.str(), env, paludis::UserPackageDepSpecOptions(), paludis::filter::All())));
-			std::tr1::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::MatchPackageOptions()) |
-																						paludis::filter::And(
-																							paludis::filter::SupportsAction<paludis::InstalledAction>(),
-																							paludis::filter::Slot(slot)))]);
+//		std::cout << "Getting list of files of possibly old package version..." << std::endl;
+		std::ostringstream oldDepSpecStr;
+		oldDepSpecStr << hook.get("CATEGORY") << "/" << hook.get("PN") << ":" << hook.get("SLOT") << "::" << destination_repo.data();
+		oldDepSpec = std::tr1::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(paludis::parse_user_package_dep_spec(oldDepSpecStr.str(), env, paludis::UserPackageDepSpecOptions(), paludis::filter::All())));
+//		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
+		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::MatchPackageOptions()) |
+																					paludis::filter::And(
+																						paludis::filter::SupportsAction<paludis::InstalledAction>(),
+																						paludis::filter::Slot(slot)))]);
 /*
  * Counting the number of found pkgIDs
  */
-			int oldPkgCount = 0;
-			for(paludis::PackageIDSequence::ConstIterator p(oldPkgSeq->begin()), p_end(oldPkgSeq->end()); p != p_end; ++p)
-				oldPkgCount++;
-//			std::cout << "OldPkgCount : " << oldPkgCount << std::endl;
+		int oldPkgCount = 0;
+		for(paludis::PackageIDSequence::ConstIterator p(oldPkgSeq->begin()), p_end(oldPkgSeq->end()); p != p_end; ++p)
+			oldPkgCount++;
+//		std::cout << "OldPkgCount : " << oldPkgCount << std::endl;
 /*
  * Retrieving the correct pkgID
  * If 1 pkgID is found or if severals pkgIDs are found but have a different version, take the greatest
  */
-			for(paludis::PackageIDSequence::ConstIterator p(oldPkgSeq->begin()), p_end(oldPkgSeq->end()); p != p_end; ++p)
+		for(paludis::PackageIDSequence::ConstIterator p(oldPkgSeq->begin()), p_end(oldPkgSeq->end()); p != p_end; ++p)
+		{
+			if(oldPkgCount == 1 || (oldPkgCount > 1 && (*p)->version().compare(packageID->version()) != 0))
 			{
-				if(oldPkgCount == 1 || (oldPkgCount > 1 && (*p)->version().compare(packageID->version()) != 0))
+				if(pkgID_has_contents_file(*p) && (oldPkgId == NULL || oldPkgId->version() < (*p)->version()))
 				{
-					if(pkgID_has_contents_file(*p) && (oldPkgId == NULL || oldPkgId->version() < (*p)->version()))
-					{
-						oldPkgId = *p;
-						oldDepSpec = std::tr1::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(oldPkgId->uniquely_identifying_spec()));
-					}
+					oldPkgId = *p;
+					oldDepSpec = std::tr1::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(oldPkgId->uniquely_identifying_spec()));
 				}
 			}
-//			std::cout << "OldPkgDepSpec : " << *oldDepSpec << std::endl;
-			if(oldPkgId)
-			{
-//				std::cout << "OldPkgId : " << oldPkgId->canonical_form(paludis::idcf_full) << std::endl;
-				ContentsVisitorForIPFL visitor(hook.get("ROOT"), &installedPkgFilesList);
-				std::for_each(
-					paludis::indirect_iterator(oldPkgId->contents_key()->value()->begin()),
-					paludis::indirect_iterator(oldPkgId->contents_key()->value()->end()),
-					paludis::accept_visitor(visitor)
-				);
-			}
-//			std::cout << "List of files already installed by other version of package..." << std::endl;
-//			for(ContentsList::const_iterator file(installedPkgFilesList.begin()), file_end(installedPkgFilesList.end()); file != file_end; file++)
-//			{
-//				std::cout << file->realpath_if_exists();
-//				if(file->is_symbolic_link())
-//					std::cout << " -> " << file->readlink();
-//				std::cout << std::endl;
-//			}
 		}
+//		std::cout << "OldPkgDepSpec after search : " << *oldDepSpec << std::endl;
+		if(oldPkgId)
+		{
+//			std::cout << "OldPkgId : " << oldPkgId->canonical_form(paludis::idcf_full) << std::endl;
+			ContentsVisitorForIPFL visitor(hook.get("ROOT"), &installedPkgFilesList);
+			std::for_each(
+				paludis::indirect_iterator(oldPkgId->contents_key()->value()->begin()),
+				paludis::indirect_iterator(oldPkgId->contents_key()->value()->end()),
+				paludis::accept_visitor(visitor)
+			);
+		}
+//		std::cout << "List of files already installed by other version of package..." << std::endl;
+//		for(ContentsList::const_iterator file(installedPkgFilesList.begin()), file_end(installedPkgFilesList.end()); file != file_end; file++)
+//		{
+//			std::cout << file->realpath_if_exists();
+//			if(file->is_symbolic_link())
+//				std::cout << " -> " << file->readlink();
+//			std::cout << std::endl;
+//		}
 /*
  * If there are no files involved in collision in IMAGE, tell the user that everything is OK
  * Otherwise, find out packages containing files involved in collision
@@ -430,12 +430,11 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 				{
 					if(!find_owner(env, paludis::stringify(file->first), &collisions))
 					{
-//						std::cout << "File not found : " << file->first << std::endl;
 /*
  * Add file to installing PackageID if orphaned
  */
 						bool pkgFound = false;
-						for(FilesByPackage::iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); (fbpIt != fbpIt_end) || pkgFound; ++fbpIt)
+						for(FilesByPackage::iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); (fbpIt != fbpIt_end) && !pkgFound; ++fbpIt)
 						{
 							if(paludis::stringify(*(fbpIt->first)) == paludis::stringify(*depSpec))
 							{
@@ -450,20 +449,17 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 							collisions.insert(std::make_pair(depSpec, vector));
 						}
 					}
+//					for(FilesByPackage::const_iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); fbpIt != fbpIt_end; ++fbpIt)
+//					{
+//						std::cout << *(fbpIt->first) << std::endl;
+//						for(std::vector<paludis::FSEntry>::const_iterator fs(fbpIt->second.begin()), fs_end(fbpIt->second.end()); fs != fs_end; ++fs)
+//							std::cout << *fs << std::endl;
+//					}
 				}
 			}
 /*
  * Show each package and files involved in collision and abort installation
  */
-//			for(FilesByPackage::iterator file(collisions.begin()), file_end(collisions.end()); file != file_end; ++file)
-//			{
-//				for(std::vector<paludis::FSEntry>::iterator fs(file->second.begin()), fs_end(file->second.end()); fs != fs_end; ++fs)
-//				{
-//					if(fs->getFileName() == root)
-//						file->second.erase(fs);
-//				}
-//				if(file->second.empty())
-//					collisions.erase(file);
 			std::cout << "Detected collisions :" << std::endl;
 			for(FilesByPackage::const_iterator file(collisions.begin()), file_end(collisions.end()); file != file_end; ++file)
 			{
@@ -479,17 +475,6 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 					std::cout << std::endl;
 				}
 			}
-//			std::cout << "Collisions with installing files :" << std::endl;
-//			for(FSEntryList::const_iterator entry(imageFileList.begin()), entry_end(imageFileList.end()); entry != entry_end; ++entry)
-//			{
-//				if(entry->second)
-//				{
-//					std::cout << "  " << entry->first;
-//					if(entry->first.is_symbolic_link())
-//						std::cout << " -> " << entry->first.readlink();
-//					std::cout << std::endl;
-//				}
-//			}
 			std::string message("Collisions detected, aborting");
 			std::cout << message << std::endl;
 			result.max_exit_status = paludis::value_for<paludis::n::max_exit_status>(1);
