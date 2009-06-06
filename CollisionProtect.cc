@@ -434,14 +434,21 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 /*
  * Add file to installing PackageID if orphaned
  */
-						if(collisions.find(depSpec) == collisions.end())
+						bool pkgFound = false;
+						for(FilesByPackage::iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); (fbpIt != fbpIt_end) || pkgFound; ++fbpIt)
+						{
+							if(paludis::stringify(*(fbpIt->first)) == paludis::stringify(*depSpec))
+							{
+								pkgFound = true;
+								fbpIt->second.push_back(file->first);
+							}
+						}
+						if(!pkgFound)
 						{
 							std::vector<paludis::FSEntry> vector;
 							vector.push_back(file->first);
 							collisions.insert(std::make_pair(depSpec, vector));
 						}
-						else
-							collisions[depSpec].push_back(file->first);
 					}
 				}
 			}

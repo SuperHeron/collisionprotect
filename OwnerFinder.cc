@@ -37,16 +37,22 @@ void OwnerFinder::find(const paludis::FSEntry & fsEntry)
 {
 	if(this->fileToFind == paludis::stringify(fsEntry))
 	{
+		bool pkgFound = false;
 		this->found = true;
-		FilesByPackage::iterator fbpIt = this->collisions->find(this->depSpec);
-		if(fbpIt == this->collisions->end())
+		for(FilesByPackage::iterator fbpIt(this->collisions->begin()), fbpIt_end(this->collisions->end()); (fbpIt != fbpIt_end) || pkgFound; ++fbpIt)
+		{
+			if(paludis::stringify(*(fbpIt->first)) == paludis::stringify(*(this->depSpec)))
+			{
+				pkgFound = true;
+				fbpIt->second.push_back(fsEntry);
+			}
+		}
+		if(!pkgFound)
 		{
 			std::vector<paludis::FSEntry> vector;
 			vector.push_back(fsEntry);
 			this->collisions->insert(std::make_pair(this->depSpec, vector));
 		}
-		else
-			fbpIt->second.push_back(fsEntry);
 	}
 }
 
