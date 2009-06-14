@@ -14,7 +14,7 @@ PALUDIS_HOOK_SONAME.so: $(OBJ)
 	g++ -std=c++0x -Wall $(CXXFLAGS) `pkg-config --cflags paludis` -fPIC -c $< -o obj/$@
 
 objbindir:
-	mkdir obj bin
+	mkdir -p obj bin
 
 install:
 	mkdir -p $(DESTDIR)/usr/share/paludis/hooks/$(PALUDIS_HOOK_NAME)
