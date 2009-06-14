@@ -11,7 +11,7 @@ PALUDIS_HOOK_SONAME.so: $(OBJ)
 	g++ -shared obj/*.o $(LDFLAGS) `pkg-config --libs paludis` -o bin/$(PALUDIS_HOOK_SONAME).so
 
 %.o: %.cc $(HEADERS)
-	g++ -Wall $(CXXFLAGS) `pkg-config --cflags paludis` -fPIC -c $< -o obj/$@
+	g++ -std=c++0x -Wall $(CXXFLAGS) `pkg-config --cflags paludis` -fPIC -c $< -o obj/$@
 
 objbindir:
 	mkdir obj bin
