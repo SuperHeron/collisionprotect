@@ -64,6 +64,25 @@ std::string canonicalize_path(std::string path)
 }
 
 /**
+* Get an environment variable defined in bashrc_files() like /etc/paludis/bashrc
+* @param hook Current hook
+* @param key Name of environment variable
+* @return Value of environment variable
+*/
+std::string get_envvar_from_bashrc(const paludis::Hook& hook, const std::string& key)
+{
+	std::istringstream bashrc_ss(hook.get("PALUDIS_BASHRC_FILES"));
+	std::ostringstream command;
+	std::string buffer;
+	while(bashrc_ss >> buffer)
+		command << "source " << buffer << "; ";
+	command << "echo $" << key;
+	redi::ipstream cmd_ss(command.str());
+	getline(cmd_ss, buffer);
+	return buffer;
+}
+
+ /**
  * Check whether a file reside in a directory of COLLISION_IGNORE
  * @param file File to check
  * @param vector COLLISION_IGNORE directories
@@ -274,7 +293,8 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
  */
 	std::cout << std::endl;
 //	std::cout << "Checking contents of ${COLLISION_IGNORE}..." << std::endl;
-	std::string collisionIgnore = paludis::getenv_with_default("COLLISION_IGNORE", "");
+//	std::string collisionIgnore = paludis::getenv_with_default("COLLISION_IGNORE", "");
+	std::string collisionIgnore = get_envvar_from_bashrc(hook, "COLLISION_IGNORE");
 //	std::cout << "COLLISION_IGNORE : " << collisionIgnore << std::endl;
 	std::istringstream collIgnore_iss(collisionIgnore);
 	std::string root = hook.get("ROOT");
