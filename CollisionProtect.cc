@@ -236,8 +236,7 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 	bool found_owner = false;
 	for(paludis::PackageDatabase::RepositoryConstIterator r(env->package_database()->begin_repositories()), r_end(env->package_database()->end_repositories()); r != r_end; ++r)
 	{
-		paludis::SupportsActionTest<paludis::InstalledAction> action_test;
-		if((*r)->some_ids_might_support_action(action_test))
+		if(!(*r)->installed_root_key())
 		{
 			std::tr1::shared_ptr<const paludis::CategoryNamePartSet> cats((*r)->category_names());
 			for(paludis::CategoryNamePartSet::ConstIterator c(cats->begin()), c_end(cats->end()); c != c_end; ++c)
@@ -360,7 +359,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 //		std::cout << "PkgDepSpec : " << *depSpec << std::endl;
 		std::tr1::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::MatchPackageOptions()) |
 																				paludis::filter::And(
-																					paludis::filter::SupportsAction<paludis::InstalledAction>(),
+																					paludis::filter::InstalledAtRoot(env->root()),
 																					paludis::filter::Slot(slot)))]);
 		for(paludis::PackageIDSequence::ConstIterator id(pkgIDs->begin()), id_end(pkgIDs->end()); id != id_end; ++id)
 		{
@@ -384,7 +383,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 //		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
 		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::MatchPackageOptions()) |
 																					paludis::filter::And(
-																						paludis::filter::SupportsAction<paludis::InstalledAction>(),
+																						paludis::filter::InstalledAtRoot(env->root()),
 																						paludis::filter::Slot(slot)))]);
 /*
  * Counting the number of found pkgIDs
