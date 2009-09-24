@@ -236,7 +236,7 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 	bool found_owner = false;
 	for(paludis::PackageDatabase::RepositoryConstIterator r(env->package_database()->begin_repositories()), r_end(env->package_database()->end_repositories()); r != r_end; ++r)
 	{
-		if(!(*r)->installed_root_key())
+		if((*r)->installed_root_key())
 		{
 			std::tr1::shared_ptr<const paludis::CategoryNamePartSet> cats((*r)->category_names());
 			for(paludis::CategoryNamePartSet::ConstIterator c(cats->begin()), c_end(cats->end()); c != c_end; ++c)
