@@ -23,14 +23,12 @@
 #include <iostream>
 
 #include <paludis/paludis.hh>
-#include <paludis/repositories/e/eapi.hh>
 
 #include <tr1/memory>
 #include <typeinfo>
 
 #include "pstream.h"
 
-//#include "ContentsVisitorForIFL.hh"
 #include "ContentsVisitorForIPFL.hh"
 #include "CollisionProtect.hh"
 #include "OwnerFinder.hh"
