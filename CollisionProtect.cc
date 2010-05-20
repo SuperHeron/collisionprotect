@@ -21,8 +21,21 @@
  */
 
 #include <iostream>
+#include <sstream>
 
-#include <paludis/paludis.hh>
+#include <paludis/elike_slot_requirement.hh>
+#include <paludis/environment.hh>
+#include <paludis/filtered_generator.hh>
+#include <paludis/generator.hh>
+#include <paludis/hook.hh>
+#include <paludis/package_database.hh>
+#include <paludis/selection.hh>
+#include <paludis/user_dep_spec.hh>
+#include <paludis/util/dir_iterator.hh>
+#include <paludis/util/indirect_iterator.hh>
+#include <paludis/util/make_named_values.hh>
+#include <paludis/util/stringify.hh>
+#include <paludis/util/system.hh>
 
 #include <tr1/memory>
 #include <typeinfo>
