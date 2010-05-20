@@ -275,7 +275,7 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
  */
 paludis::HookResult paludis_hook_run(const paludis::Environment* env, const paludis::Hook& hook)
 {
-    paludis::HookResult result = { paludis::value_for<paludis::n::max_exit_status>(0), paludis::value_for<paludis::n::output>("") };
+    paludis::HookResult result = paludis::make_named_values<paludis::HookResult>(paludis::n::max_exit_status() = 0, paludis::n::output() = "");
 /*
  * Showing all variables in hook
  * For debugging only
@@ -310,7 +310,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 		std::ostringstream message;
 		message << "${COLLISION_IGNORE} contains \"" << root << "\", skipping collision check";
 		std::cout << message.str() << std::endl;
-		result.output = paludis::value_for<paludis::n::output>(message.str());
+		result.output() = message.str();
 		return result;
 	}
 	else
@@ -432,7 +432,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 		{
 			std::string message("No collision detected, continuing");
 			std::cout << message << std::endl;
-			result.output = paludis::value_for<paludis::n::output>(message);
+			result.output() = message;
             return result;
 		}
 		else
@@ -494,8 +494,8 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 			}
 			std::string message("Collisions detected, aborting");
 			std::cout << message << std::endl;
-			result.max_exit_status = paludis::value_for<paludis::n::max_exit_status>(1);
-			result.output = paludis::value_for<paludis::n::output>(message);
+			result.max_exit_status() = 1;
+			result.output() = message;
 			return result;
 		}
 	}
