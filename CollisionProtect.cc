@@ -365,7 +365,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
  */
 //		std::cout << "Creating PackageDepSpec..." << std::endl;
 		std::ostringstream depSpecStr;
-		depSpecStr << "=" << hook.get("CATEGORY") << "/" << hook.get("PNVR") << ":" << hook.get("SLOT") << "::" << destination_repo.data();
+		depSpecStr << "=" << hook.get("CATEGORY") << "/" << hook.get("PNVR") << ":" << hook.get("SLOT") << "::" << destination_repo.value();
 		depSpec = std::tr1::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(paludis::parse_user_package_dep_spec(depSpecStr.str(), env, paludis::UserPackageDepSpecOptions(), paludis::filter::All())));
 //		std::cout << "PkgDepSpec : " << *depSpec << std::endl;
 		std::tr1::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::MatchPackageOptions()) |
@@ -389,7 +389,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
  */
 //		std::cout << "Getting list of files of possibly old package version..." << std::endl;
 		std::ostringstream oldDepSpecStr;
-		oldDepSpecStr << hook.get("CATEGORY") << "/" << hook.get("PN") << ":" << hook.get("SLOT") << "::" << destination_repo.data();
+		oldDepSpecStr << hook.get("CATEGORY") << "/" << hook.get("PN") << ":" << hook.get("SLOT") << "::" << destination_repo.value();
 		oldDepSpec = std::tr1::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(paludis::parse_user_package_dep_spec(oldDepSpecStr.str(), env, paludis::UserPackageDepSpecOptions(), paludis::filter::All())));
 //		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
 		std::tr1::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::MatchPackageOptions()) |
