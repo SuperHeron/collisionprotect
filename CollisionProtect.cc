@@ -23,19 +23,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <paludis/elike_slot_requirement.hh>
-#include <paludis/environment.hh>
-#include <paludis/filtered_generator.hh>
-#include <paludis/generator.hh>
-#include <paludis/hook.hh>
-#include <paludis/package_database.hh>
-#include <paludis/selection.hh>
-#include <paludis/user_dep_spec.hh>
-#include <paludis/util/dir_iterator.hh>
-#include <paludis/util/indirect_iterator.hh>
-#include <paludis/util/make_named_values.hh>
-#include <paludis/util/stringify.hh>
-#include <paludis/util/system.hh>
+#include <paludis/paludis.hh>
 
 #include <tr1/memory>
 #include <typeinfo>
@@ -265,7 +253,7 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 							std::tr1::shared_ptr<const paludis::Contents> contents((*v)->contents_key()->value());
 							std::tr1::shared_ptr<const paludis::PackageDepSpec> depSpec(new paludis::PackageDepSpec((*v)->uniquely_identifying_spec()));
 							OwnerFinder finder(fileName, depSpec, collisions);
-							std::for_each(indirect_iterator(contents->begin()), indirect_iterator(contents->end()), paludis::accept_visitor(finder));
+							std::for_each(paludis::indirect_iterator(contents->begin()), paludis::indirect_iterator(contents->end()), paludis::accept_visitor(finder));
 							found_owner = finder.isFound();
 							if(found_owner)
 							{
