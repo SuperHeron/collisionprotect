@@ -31,7 +31,7 @@
 class OwnerFinder
 {
     public:
-        OwnerFinder(std::string, std::tr1::shared_ptr<const paludis::PackageDepSpec> &, FilesByPackage*);
+        OwnerFinder(std::string, std::shared_ptr<const paludis::PackageDepSpec> &, FilesByPackage*);
         void find(const paludis::FSEntry &);
         bool isFound() const;
         void visit(const paludis::ContentsFileEntry &);
@@ -40,7 +40,7 @@ class OwnerFinder
         void visit(const paludis::ContentsSymEntry &);
     private:
         std::string fileToFind;
-        std::tr1::shared_ptr<const paludis::PackageDepSpec> depSpec;
+        std::shared_ptr<const paludis::PackageDepSpec> depSpec;
         FilesByPackage* collisions;
         bool found;
 };

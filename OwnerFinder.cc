@@ -25,7 +25,7 @@
 
 #include "OwnerFinder.hh"
 
-OwnerFinder::OwnerFinder(std::string fileToFind, std::tr1::shared_ptr<const paludis::PackageDepSpec> & depSpec, FilesByPackage * collisions)
+OwnerFinder::OwnerFinder(std::string fileToFind, std::shared_ptr<const paludis::PackageDepSpec> & depSpec, FilesByPackage * collisions)
 {
     this->fileToFind = fileToFind;
     this->depSpec = depSpec;
