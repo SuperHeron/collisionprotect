@@ -358,7 +358,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 //		std::cout << "PkgDepSpec : " << *depSpec << std::endl;
 		std::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::MatchPackageOptions()) |
 																				paludis::filter::And(
-																					paludis::filter::InstalledAtRoot(env->root()),
+																					paludis::filter::InstalledAtRoot(env->preferred_root_key()->value()),
 																					paludis::filter::Slot(slot)))]);
 		for(paludis::PackageIDSequence::ConstIterator id(pkgIDs->begin()), id_end(pkgIDs->end()); id != id_end; ++id)
 		{
@@ -382,7 +382,7 @@ paludis::HookResult paludis_hook_run(const paludis::Environment* env, const palu
 //		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
 		std::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::MatchPackageOptions()) |
 																					paludis::filter::And(
-																						paludis::filter::InstalledAtRoot(env->root()),
+																						paludis::filter::InstalledAtRoot(env->preferred_root_key()->value()),
 																						paludis::filter::Slot(slot)))]);
 /*
  * Counting the number of found pkgIDs
