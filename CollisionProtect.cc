@@ -274,7 +274,7 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 /**
  * Function to run the current hook (declared in Paludis API)
  */
-paludis::HookResult paludis_hook_run(const paludis::Environment* env, const paludis::Hook& hook)
+paludis::HookResult paludis_hook_run(const paludis::Environment* env, const paludis::Hook& hook, const std::shared_ptr<paludis::OutputManager> &)
 {
     paludis::HookResult result = paludis::make_named_values<paludis::HookResult>(paludis::n::max_exit_status() = 0, paludis::n::output() = "");
 /*
