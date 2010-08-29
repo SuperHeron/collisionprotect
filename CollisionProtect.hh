@@ -28,13 +28,13 @@
 
 #include <paludis/package_id.hh>
 
-#include <paludis/util/fs_entry.hh>
+#include <paludis/util/fs_path.hh>
 
 /**
  * Typedefs
  */
-typedef std::map<paludis::FSEntry, bool> FSEntryList;
-typedef std::map<std::shared_ptr<const paludis::PackageDepSpec>, std::vector<paludis::FSEntry> > FilesByPackage;
-typedef std::vector<paludis::FSEntry> ContentsList;
+typedef std::map<std::string, bool> FSPathList;
+typedef std::map<std::shared_ptr<const paludis::PackageDepSpec>, std::vector<paludis::FSPath> > FilesByPackage;
+typedef std::vector<paludis::FSPath> ContentsList;
 
 #endif // __COLLISION_PROTECT_HH__

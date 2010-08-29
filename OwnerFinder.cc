@@ -33,9 +33,9 @@ OwnerFinder::OwnerFinder(std::string fileToFind, std::shared_ptr<const paludis::
     this->found = false;
 }
 
-void OwnerFinder::find(const paludis::FSEntry & fsEntry)
+void OwnerFinder::find(const paludis::FSPath & fsPath)
 {
-	if(this->fileToFind == paludis::stringify(fsEntry))
+	if(this->fileToFind == paludis::stringify(fsPath))
 	{
 		bool pkgFound = false;
 		this->found = true;
@@ -44,13 +44,13 @@ void OwnerFinder::find(const paludis::FSEntry & fsEntry)
 			if(paludis::stringify(*(fbpIt->first)) == paludis::stringify(*(this->depSpec)))
 			{
 				pkgFound = true;
-				fbpIt->second.push_back(fsEntry);
+				fbpIt->second.push_back(fsPath);
 			}
 		}
 		if(!pkgFound)
 		{
-			std::vector<paludis::FSEntry> vector;
-			vector.push_back(fsEntry);
+			std::vector<paludis::FSPath> vector;
+			vector.push_back(fsPath);
 			this->collisions->insert(std::make_pair(this->depSpec, vector));
 		}
 	}
@@ -63,8 +63,8 @@ bool OwnerFinder::isFound() const
 
 void OwnerFinder::visit(const paludis::ContentsFileEntry & e)
 {
-	paludis::FSEntry entry(e.location_key()->value());
-	this->find(entry);
+	paludis::FSPath fsPath(e.location_key()->value());
+	this->find(fsPath);
 }
 
 void OwnerFinder::visit(const paludis::ContentsDirEntry & e)
@@ -77,6 +77,6 @@ void OwnerFinder::visit(const paludis::ContentsOtherEntry & e)
 
 void OwnerFinder::visit(const paludis::ContentsSymEntry & e)
 {
-	paludis::FSEntry entry(e.location_key()->value());
-	this->find(entry);
+	paludis::FSPath fsPath(e.location_key()->value());
+	this->find(fsPath);
 }

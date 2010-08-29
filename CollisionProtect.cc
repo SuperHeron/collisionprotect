@@ -87,7 +87,7 @@ std::string get_envvar_from_bashrc(const paludis::Hook& hook, const std::string&
  * @param vector COLLISION_IGNORE directories
  * @return whether file is in a COLLISION_IGNORE directory or not
  */
-bool is_in_collision_ignore(const paludis::FSEntry& file, std::vector<std::string>& vector)
+bool is_in_collision_ignore(const paludis::FSPath& file, std::vector<std::string>& vector)
 {
 	bool returnBool = false;
 	for(std::vector<std::string>::const_iterator path(vector.begin()), path_end(vector.end()); path != path_end; ++path)
@@ -108,19 +108,19 @@ bool is_in_collision_ignore(const paludis::FSEntry& file, std::vector<std::strin
  * @param list List of files
  * @param collIgnore ${COLLISION_IGNORE} and friends directories
  */
-void iterate_over_directory(const paludis::FSEntry& directory, const paludis::FSEntry& path_to_strip, FSEntryList* list, std::vector<std::string>& collIgnore, std::string root)
+void iterate_over_directory(const paludis::FSPath& directory, const paludis::FSPath& path_to_strip, FSPathList* list, std::vector<std::string>& collIgnore, std::string root)
 {
-	for(paludis::DirIterator di(directory), di_end; di != di_end; ++di)
+	for(paludis::FSIterator fsi(directory, {}), fsi_end; fsi != fsi_end; ++fsi)
 	{
-		if(di->is_directory())
-			iterate_over_directory(*di, path_to_strip, list, collIgnore, root);
+		if(fsi->stat().is_directory())
+			iterate_over_directory(*fsi, path_to_strip, list, collIgnore, root);
 		else
 		{
-			paludis::FSEntry entry(paludis::FSEntry(root)/di->strip_leading(path_to_strip));
-			if(is_in_collision_ignore(entry, collIgnore))
-				list->insert(std::make_pair(entry, false));
+			paludis::FSPath path(paludis::FSPath(root)/fsi->strip_leading(path_to_strip));
+			if(is_in_collision_ignore(path, collIgnore))
+				list->insert(std::make_pair(paludis::stringify(path), false));
 			else
-				list->insert(std::make_pair(entry, entry.exists()));
+				list->insert(std::make_pair(paludis::stringify(path), path.stat().exists()));
 		}
 	}
 }
@@ -149,7 +149,7 @@ std::string findGccDataInfoDir()
 {
 	std::string gccMachine;
 	std::string gccVersion;
-	paludis::FSEntry gccDataInfoDir("/usr/share/gcc-data");
+	paludis::FSPath gccDataInfoDir("/usr/share/gcc-data");
 	redi::ipstream cmd_ss("gcc -dumpmachine");
 	getline(cmd_ss, gccMachine);
 	redi::ipstream cmd_ss2("gcc -dumpversion");
@@ -158,7 +158,7 @@ std::string findGccDataInfoDir()
 	gccDataInfoDir /= gccVersion;
 	gccDataInfoDir /= "info";
 //	std::cout << gccDataInfoDir << std::endl;
-	return gccDataInfoDir.exists() ? paludis::stringify(gccDataInfoDir) : "";
+	return gccDataInfoDir.stat().exists() ? paludis::stringify(gccDataInfoDir) : "";
 }
 
 /**
@@ -167,7 +167,7 @@ std::string findGccDataInfoDir()
  * @param pkgList installed package files list
  * @return true if empty or no colliding files left
  */
-bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
+bool compareFilesList(FSPathList& imageList, ContentsList& pkgList)
 {
 //	std::cout << "Comparison..." << std::endl;
     bool returnBool = true;
@@ -175,7 +175,7 @@ bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
     if(!imageList.empty())
     {
     	std::cout << imageList.size() << " files to check" << std::endl;
-        for(FSEntryList::iterator imgFS(imageList.begin()), imgFS_end(imageList.end()); imgFS != imgFS_end; ++imgFS)
+        for(FSPathList::iterator imgFS(imageList.begin()), imgFS_end(imageList.end()); imgFS != imgFS_end; ++imgFS)
         {
 			count++;
 			if(count > 0 && count % 500 == 0)
@@ -188,11 +188,11 @@ bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
 //				if(imgFS->first.is_symbolic_link())
 //					std::cout << " -> " << imgFS->first.readlink();
 //				std::cout << std::endl;
-				ContentsList::const_iterator pkgFS = find(pkgList.begin(), pkgList.end(), imgFS->first.realpath_if_exists());
+				ContentsList::const_iterator pkgFS = find(pkgList.begin(), pkgList.end(), paludis::FSPath(imgFS->first).realpath_if_exists());
 //				std::cout << imgFS->first.realpath_if_exists() << " (" << std::boolalpha << (pkgFS != pkgList.end()) << std::noboolalpha << ")" << std::endl;
 				if(pkgFS != pkgList.end())
                 {
-                    if(imgFS->first.realpath_if_exists() == pkgFS->realpath_if_exists())
+                    if(paludis::FSPath(imgFS->first).realpath_if_exists() == pkgFS->realpath_if_exists())
                     {
 //						std::cout << "Found file : " << pkgFS->realpath_if_exists() << std::endl;
 						imgFS->second = false;
@@ -216,11 +216,11 @@ bool compareFilesList(FSEntryList& imageList, ContentsList& pkgList)
  **/
 bool pkgID_has_contents_file(const std::shared_ptr<const paludis::PackageID>& pkgID)
 {
-	paludis::FSEntry vdb_dir(pkgID->fs_location_key()->value());
-	paludis::FSEntry contents_lower(vdb_dir / "contents");
-	paludis::FSEntry contents_upper(vdb_dir / "CONTENTS");
-//	std::cout << pkgID->canonical_form(paludis::idcf_full) << "(" << std::boolalpha << (contents_lower.exists() || contents_upper.exists()) << std::noboolalpha << ")" << std::endl;
-	return (contents_lower.exists() || contents_upper.exists());
+	paludis::FSPath vdb_dir(pkgID->fs_location_key()->value());
+	paludis::FSPath contents_lower(vdb_dir / "contents");
+	paludis::FSPath contents_upper(vdb_dir / "CONTENTS");
+//	std::cout << pkgID->canonical_form(paludis::idcf_full) << "(" << std::boolalpha << (contents_lower.stat().exists() || contents_upper.stat().exists()) << std::noboolalpha << ")" << std::endl;
+	return (contents_lower.stat().exists() || contents_upper.stat().exists());
 }
 
 /**
@@ -328,7 +328,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 //		for(std::vector<std::string>::const_iterator cIVit(collIgnoreVector.begin()), cIVit_end(collIgnoreVector.end()); cIVit != cIVit_end; ++cIVit)
 //            std::cout << *cIVit << std::endl;
         ContentsList installedPkgFilesList;
- 		FSEntryList imageFileList;
+ 		FSPathList imageFileList;
 		FilesByPackage collisions;
 		paludis::QualifiedPackageName packageName(paludis::CategoryNamePart(hook.get("CATEGORY")), paludis::PackageNamePart(hook.get("PN")));
 		paludis::SlotName slot(hook.get("SLOT"));
@@ -345,8 +345,8 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
  * Getting files from currently installing package
  */
 //		std::cout << "Iterating over ${IMAGE} directory..." << std::endl;
-		iterate_over_directory(hook.get("IMAGE"), hook.get("IMAGE"), &imageFileList, collIgnoreVector, root);
-//		for(FSEntryList::const_iterator fs(imageFileList.begin()), fs_end(imageFileList.end()); fs != fs_end; ++fs)
+		iterate_over_directory(paludis::FSPath(hook.get("IMAGE")), paludis::FSPath(hook.get("IMAGE")), &imageFileList, collIgnoreVector, root);
+//		for(FSPathList::const_iterator fs(imageFileList.begin()), fs_end(imageFileList.end()); fs != fs_end; ++fs)
 //			std::cout << fs->first << std::endl;
 /*
  * Make packageID from CATEGORY, PN, PVR and SLOT
@@ -442,7 +442,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 /*
  * Find owners of existing files (this can take a while)
  */
-			for(FSEntryList::iterator file(imageFileList.begin()), file_end(imageFileList.end()); file != file_end; ++file)
+			for(FSPathList::iterator file(imageFileList.begin()), file_end(imageFileList.end()); file != file_end; ++file)
 			{
 				if(file->second)
 				{
@@ -457,20 +457,20 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 							if(paludis::stringify(*(fbpIt->first)) == paludis::stringify(*depSpec))
 							{
 								pkgFound = true;
-								fbpIt->second.push_back(file->first);
+								fbpIt->second.push_back(paludis::FSPath(file->first));
 							}
 						}
 						if(!pkgFound)
 						{
-							std::vector<paludis::FSEntry> vector;
-							vector.push_back(file->first);
+							std::vector<paludis::FSPath> vector;
+							vector.push_back(paludis::FSPath(file->first));
 							collisions.insert(std::make_pair(depSpec, vector));
 						}
 					}
 //					for(FilesByPackage::const_iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); fbpIt != fbpIt_end; ++fbpIt)
 //					{
 //						std::cout << *(fbpIt->first) << std::endl;
-//						for(std::vector<paludis::FSEntry>::const_iterator fs(fbpIt->second.begin()), fs_end(fbpIt->second.end()); fs != fs_end; ++fs)
+//						for(std::vector<paludis::FSPath>::const_iterator fs(fbpIt->second.begin()), fs_end(fbpIt->second.end()); fs != fs_end; ++fs)
 //							std::cout << *fs << std::endl;
 //					}
 				}
@@ -485,10 +485,10 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 					std::cout << "	Orphaned files :" << std::endl;
 				else
 					std::cout << "	" << *(file->first) << " :" << std::endl;
-				for(std::vector<paludis::FSEntry>::const_iterator fs(file->second.begin()), fs_end(file->second.end()); fs != fs_end; ++fs)
+				for(std::vector<paludis::FSPath>::const_iterator fs(file->second.begin()), fs_end(file->second.end()); fs != fs_end; ++fs)
 				{
 					std::cout << "		" << *fs;
-					if(fs->is_symbolic_link())
+					if(fs->stat().is_symlink())
 						std::cout << " -> " << fs->readlink();
 					std::cout << std::endl;
 				}
