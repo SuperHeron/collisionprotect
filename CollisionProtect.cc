@@ -399,7 +399,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 		{
 			if(oldPkgCount == 1 || (oldPkgCount > 1 && (*p)->version().compare(packageID->version()) != 0))
 			{
-				if(pkgID_has_contents_file(*p) && (oldPkgId == NULL || oldPkgId->version() < (*p)->version()))
+				if(pkgID_has_contents_file(*p) && (oldPkgId.get() == NULL || oldPkgId->version() < (*p)->version()))
 				{
 					oldPkgId = *p;
 					oldDepSpec = std::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(oldPkgId->uniquely_identifying_spec()));
