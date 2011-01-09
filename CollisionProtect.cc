@@ -24,6 +24,7 @@
 #include <sstream>
 
 #include <paludis/paludis.hh>
+#include <paludis/util/make_null_shared_ptr.hh>
 
 #include <memory>
 #include <typeinfo>
@@ -356,7 +357,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 		depSpecStr << "=" << hook.get("CATEGORY") << "/" << hook.get("PNVR") << ":" << hook.get("SLOT") << "::" << destination_repo.value();
 		depSpec = std::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(paludis::parse_user_package_dep_spec(depSpecStr.str(), env, paludis::UserPackageDepSpecOptions(), paludis::filter::All())));
 //		std::cout << "PkgDepSpec : " << *depSpec << std::endl;
-		std::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::MatchPackageOptions()) |
+		std::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
 																				paludis::filter::And(
 																					paludis::filter::InstalledAtRoot(env->preferred_root_key()->value()),
 																					paludis::filter::Slot(slot)))]);
@@ -380,7 +381,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 		oldDepSpecStr << hook.get("CATEGORY") << "/" << hook.get("PN") << ":" << hook.get("SLOT") << "::" << destination_repo.value();
 		oldDepSpec = std::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(paludis::parse_user_package_dep_spec(oldDepSpecStr.str(), env, paludis::UserPackageDepSpecOptions(), paludis::filter::All())));
 //		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
-		std::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::MatchPackageOptions()) |
+		std::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
 																					paludis::filter::And(
 																						paludis::filter::InstalledAtRoot(env->preferred_root_key()->value()),
 																						paludis::filter::Slot(slot)))]);
