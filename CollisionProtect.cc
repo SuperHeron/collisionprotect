@@ -238,13 +238,13 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 	{
 		if((*r)->installed_root_key())
 		{
-			std::shared_ptr<const paludis::CategoryNamePartSet> cats((*r)->category_names());
+			std::shared_ptr<const paludis::CategoryNamePartSet> cats((*r)->category_names({}));
 			for(paludis::CategoryNamePartSet::ConstIterator c(cats->begin()), c_end(cats->end()); c != c_end; ++c)
 			{
-				std::shared_ptr<const paludis::QualifiedPackageNameSet> pkgs((*r)->package_names(*c));
+				std::shared_ptr<const paludis::QualifiedPackageNameSet> pkgs((*r)->package_names(*c, {}));
 				for(paludis::QualifiedPackageNameSet::ConstIterator p(pkgs->begin()), p_end(pkgs->end()); p != p_end; ++p)
 				{
-					std::shared_ptr<const paludis::PackageIDSequence> ids((*r)->package_ids(*p));
+					std::shared_ptr<const paludis::PackageIDSequence> ids((*r)->package_ids(*p, {}));
 					for(paludis::PackageIDSequence::ConstIterator v(ids->begin()), v_end(ids->end()); v != v_end; ++v)
 					{
 //						std::cout << (*v)->canonical_form(paludis::idcf_full) << std::endl;
