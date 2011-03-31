@@ -234,7 +234,7 @@ bool pkgID_has_contents_file(const std::shared_ptr<const paludis::PackageID>& pk
 bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPackage * collisions)
 {
 	bool found_owner = false;
-	for(paludis::PackageDatabase::RepositoryConstIterator r(env->package_database()->begin_repositories()), r_end(env->package_database()->end_repositories()); r != r_end; ++r)
+	for(paludis::EnvironmentImplementation::RepositoryConstIterator r(env->begin_repositories()), r_end(env->end_repositories()); r != r_end; ++r)
 	{
 		if((*r)->installed_root_key())
 		{
