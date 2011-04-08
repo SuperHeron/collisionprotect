@@ -37,7 +37,7 @@
 
 //const std::shared_ptr<const paludis::Sequence<std::string> > paludis_hook_auto_phases(const paludis::Environment *env)
 //{
-//	std::shared_ptr<paludis::Sequence<std::string> > phases(new paludis::Sequence<std::string>());
+//	std::shared_ptr<paludis::Sequence<std::string> > phases = std::make_shared<paludis::Sequence<std::string> >();
 //	phases->push_back("merger_check_post");
 //	return phases;
 //}
@@ -252,7 +252,7 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 						{
 //							std::cout << "Contents found at :" << (*v)->fs_location_key()->value() << std::endl;
 							std::shared_ptr<const paludis::Contents> contents((*v)->contents_key()->value());
-							std::shared_ptr<const paludis::PackageDepSpec> depSpec(new paludis::PackageDepSpec((*v)->uniquely_identifying_spec()));
+							std::shared_ptr<const paludis::PackageDepSpec> depSpec = std::make_shared<const paludis::PackageDepSpec>((*v)->uniquely_identifying_spec());
 							OwnerFinder finder(fileName, depSpec, collisions);
 							std::for_each(paludis::indirect_iterator(contents->begin()), paludis::indirect_iterator(contents->end()), paludis::accept_visitor(finder));
 							found_owner = finder.isFound();
@@ -332,8 +332,8 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
  		FSPathList imageFileList;
 		FilesByPackage collisions;
 		paludis::QualifiedPackageName packageName(paludis::CategoryNamePart(hook.get("CATEGORY")), paludis::PackageNamePart(hook.get("PN")));
+		paludis::VersionSpec versionSpec(hook.get("PVR"), paludis::user_version_spec_options());
 		paludis::SlotName slot(hook.get("SLOT"));
-		std::shared_ptr<const paludis::SlotRequirement> slotRequirement(new paludis::ELikeSlotExactRequirement(slot, true));
 		const paludis::RepositoryName installed_unpackaged_repo("installed-unpackaged");
 		paludis::RepositoryName destination_repo("installed");
 		if(paludis::getenv_with_default("PALUDIS_CLIENT", "null") == "importare")
@@ -353,9 +353,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
  * Make packageID from CATEGORY, PN, PVR and SLOT
  */
 //		std::cout << "Creating PackageDepSpec..." << std::endl;
-		std::ostringstream depSpecStr;
-		depSpecStr << "=" << hook.get("CATEGORY") << "/" << hook.get("PNVR") << ":" << hook.get("SLOT") << "::" << destination_repo.value();
-		depSpec = std::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(paludis::parse_user_package_dep_spec(depSpecStr.str(), env, paludis::UserPackageDepSpecOptions(), paludis::filter::All())));
+		depSpec = std::make_shared<const paludis::PackageDepSpec>(paludis::MutablePackageDepSpecData({ }).require_package(packageName).require_version(paludis::vrc_and, paludis::VersionOperator("="), versionSpec).require_exact_slot(slot, true).require_in_repository(destination_repo));
 //		std::cout << "PkgDepSpec : " << *depSpec << std::endl;
 		std::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
 																				paludis::filter::And(
@@ -377,9 +375,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
  * Find installed package being replaced
  */
 //		std::cout << "Getting list of files of possibly old package version..." << std::endl;
-		std::ostringstream oldDepSpecStr;
-		oldDepSpecStr << hook.get("CATEGORY") << "/" << hook.get("PN") << ":" << hook.get("SLOT") << "::" << destination_repo.value();
-		oldDepSpec = std::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(paludis::parse_user_package_dep_spec(oldDepSpecStr.str(), env, paludis::UserPackageDepSpecOptions(), paludis::filter::All())));
+		oldDepSpec = std::make_shared<const paludis::PackageDepSpec>(paludis::MutablePackageDepSpecData({ }).require_package(packageName).require_exact_slot(slot, true).require_in_repository(destination_repo));
 //		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
 		std::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
 																					paludis::filter::And(
@@ -403,7 +399,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 				if(pkgID_has_contents_file(*p) && (oldPkgId.get() == NULL || oldPkgId->version() < (*p)->version()))
 				{
 					oldPkgId = *p;
-					oldDepSpec = std::shared_ptr<const paludis::PackageDepSpec>(new paludis::PackageDepSpec(oldPkgId->uniquely_identifying_spec()));
+					oldDepSpec = std::make_shared<const paludis::PackageDepSpec>(oldPkgId->uniquely_identifying_spec());
 				}
 			}
 		}
