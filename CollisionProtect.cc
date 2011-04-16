@@ -217,7 +217,7 @@ bool compareFilesList(FSPathList& imageList, ContentsList& pkgList)
  **/
 bool pkgID_has_contents_file(const std::shared_ptr<const paludis::PackageID>& pkgID)
 {
-	paludis::FSPath vdb_dir(pkgID->fs_location_key()->value());
+	paludis::FSPath vdb_dir(pkgID->fs_location_key()->parse_value());
 	paludis::FSPath contents_lower(vdb_dir / "contents");
 	paludis::FSPath contents_upper(vdb_dir / "CONTENTS");
 //	std::cout << pkgID->canonical_form(paludis::idcf_full) << "(" << std::boolalpha << (contents_lower.stat().exists() || contents_upper.stat().exists()) << std::noboolalpha << ")" << std::endl;
@@ -251,7 +251,7 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 						if((*v)->contents_key() && pkgID_has_contents_file(*v))
 						{
 //							std::cout << "Contents found at :" << (*v)->fs_location_key()->value() << std::endl;
-							std::shared_ptr<const paludis::Contents> contents((*v)->contents_key()->value());
+							std::shared_ptr<const paludis::Contents> contents((*v)->contents_key()->parse_value());
 							std::shared_ptr<const paludis::PackageDepSpec> depSpec = std::make_shared<const paludis::PackageDepSpec>((*v)->uniquely_identifying_spec());
 							OwnerFinder finder(fileName, depSpec, collisions);
 							std::for_each(paludis::indirect_iterator(contents->begin()), paludis::indirect_iterator(contents->end()), paludis::accept_visitor(finder));
@@ -357,7 +357,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 //		std::cout << "PkgDepSpec : " << *depSpec << std::endl;
 		std::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
 																				paludis::filter::And(
-																					paludis::filter::InstalledAtRoot(env->preferred_root_key()->value()),
+																					paludis::filter::InstalledAtRoot(env->preferred_root_key()->parse_value()),
 																					paludis::filter::Slot(slot)))]);
 		for(paludis::PackageIDSequence::ConstIterator id(pkgIDs->begin()), id_end(pkgIDs->end()); id != id_end; ++id)
 		{
@@ -379,7 +379,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 //		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
 		std::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
 																					paludis::filter::And(
-																						paludis::filter::InstalledAtRoot(env->preferred_root_key()->value()),
+																						paludis::filter::InstalledAtRoot(env->preferred_root_key()->parse_value()),
 																						paludis::filter::Slot(slot)))]);
 /*
  * Counting the number of found pkgIDs
@@ -409,8 +409,8 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 //			std::cout << "OldPkgId : " << oldPkgId->canonical_form(paludis::idcf_full) << std::endl;
 			ContentsVisitorForIPFL visitor(hook.get("ROOT"), &installedPkgFilesList);
 			std::for_each(
-				paludis::indirect_iterator(oldPkgId->contents_key()->value()->begin()),
-				paludis::indirect_iterator(oldPkgId->contents_key()->value()->end()),
+				paludis::indirect_iterator(oldPkgId->contents_key()->parse_value()->begin()),
+				paludis::indirect_iterator(oldPkgId->contents_key()->parse_value()->end()),
 				paludis::accept_visitor(visitor)
 			);
 		}

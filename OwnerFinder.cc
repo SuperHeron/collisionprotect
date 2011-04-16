@@ -63,7 +63,7 @@ bool OwnerFinder::isFound() const
 
 void OwnerFinder::visit(const paludis::ContentsFileEntry & e)
 {
-	paludis::FSPath fsPath(e.location_key()->value());
+	paludis::FSPath fsPath(e.location_key()->parse_value());
 	this->find(fsPath);
 }
 
@@ -77,6 +77,6 @@ void OwnerFinder::visit(const paludis::ContentsOtherEntry & e)
 
 void OwnerFinder::visit(const paludis::ContentsSymEntry & e)
 {
-	paludis::FSPath fsPath(e.location_key()->value());
+	paludis::FSPath fsPath(e.location_key()->parse_value());
 	this->find(fsPath);
 }

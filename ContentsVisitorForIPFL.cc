@@ -40,7 +40,7 @@ ContentsVisitorForIPFL::ContentsVisitorForIPFL(std::string root, ContentsList* i
 
 void ContentsVisitorForIPFL::visit(const paludis::ContentsFileEntry & d)
 {
-	this->ipfl->push_back(d.location_key()->value().realpath_if_exists());
+	this->ipfl->push_back(d.location_key()->parse_value().realpath_if_exists());
 }
 
 void ContentsVisitorForIPFL::visit(const paludis::ContentsDirEntry & d)
@@ -57,5 +57,5 @@ void ContentsVisitorForIPFL::visit(const paludis::ContentsOtherEntry & d)
 
 void ContentsVisitorForIPFL::visit(const paludis::ContentsSymEntry & d)
 {
-	this->ipfl->push_back(d.location_key()->value().realpath_if_exists());
+	this->ipfl->push_back(d.location_key()->parse_value().realpath_if_exists());
 }
