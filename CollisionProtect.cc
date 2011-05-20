@@ -353,7 +353,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
  * Make packageID from CATEGORY, PN, PVR and SLOT
  */
 //		std::cout << "Creating PackageDepSpec..." << std::endl;
-		depSpec = std::make_shared<const paludis::PackageDepSpec>(paludis::MutablePackageDepSpecData({ }).require_package(packageName).require_version(paludis::vrc_and, paludis::VersionOperator("="), versionSpec).require_exact_slot(slot, true).require_in_repository(destination_repo));
+		depSpec = std::make_shared<const paludis::PackageDepSpec>(paludis::make_package_dep_spec({ }).package(packageName).version_requirement(paludis::make_named_values<paludis::VersionRequirement>(paludis::n::version_operator() = paludis::vo_equal, paludis::n::version_spec() = versionSpec)).slot_requirement(std::make_shared<paludis::ELikeSlotExactRequirement>(slot, true)).in_repository(destination_repo));
 //		std::cout << "PkgDepSpec : " << *depSpec << std::endl;
 		std::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
 																				paludis::filter::And(
@@ -375,7 +375,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
  * Find installed package being replaced
  */
 //		std::cout << "Getting list of files of possibly old package version..." << std::endl;
-		oldDepSpec = std::make_shared<const paludis::PackageDepSpec>(paludis::MutablePackageDepSpecData({ }).require_package(packageName).require_exact_slot(slot, true).require_in_repository(destination_repo));
+		oldDepSpec = std::make_shared<const paludis::PackageDepSpec>(paludis::make_package_dep_spec({ }).package(packageName).slot_requirement(std::make_shared<paludis::ELikeSlotExactRequirement>(slot, true)).in_repository(destination_repo));
 //		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
 		std::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
 																					paludis::filter::And(
