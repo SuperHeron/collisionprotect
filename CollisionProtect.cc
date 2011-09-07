@@ -408,17 +408,21 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 		{
 //			std::cout << "OldPkgId : " << oldPkgId->canonical_form(paludis::idcf_full) << std::endl;
 			ContentsVisitorForIPFL visitor(hook.get("ROOT"), &installedPkgFilesList);
-			std::for_each(
-				paludis::indirect_iterator(oldPkgId->contents()->begin()),
-				paludis::indirect_iterator(oldPkgId->contents()->end()),
-				paludis::accept_visitor(visitor)
-			);
+			std::shared_ptr<const paludis::Contents> contents = oldPkgId->contents();
+			if (contents)
+			{
+				std::for_each(
+					paludis::indirect_iterator(contents->begin()),
+					paludis::indirect_iterator(contents->end()),
+					paludis::accept_visitor(visitor)
+				);
+			}
 		}
 //		std::cout << "List of files already installed by other version of package..." << std::endl;
 //		for(ContentsList::const_iterator file(installedPkgFilesList.begin()), file_end(installedPkgFilesList.end()); file != file_end; file++)
 //		{
 //			std::cout << file->realpath_if_exists();
-//			if(file->is_symbolic_link())
+//			if(file->stat().is_symlink())
 //				std::cout << " -> " << file->readlink();
 //			std::cout << std::endl;
 //		}
