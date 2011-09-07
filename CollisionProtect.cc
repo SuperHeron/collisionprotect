@@ -248,10 +248,10 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 					for(paludis::PackageIDSequence::ConstIterator v(ids->begin()), v_end(ids->end()); v != v_end; ++v)
 					{
 //						std::cout << (*v)->canonical_form(paludis::idcf_full) << std::endl;
-						if((*v)->contents_key() && pkgID_has_contents_file(*v))
+						if((*v)->contents() && pkgID_has_contents_file(*v))
 						{
 //							std::cout << "Contents found at :" << (*v)->fs_location_key()->value() << std::endl;
-							std::shared_ptr<const paludis::Contents> contents((*v)->contents_key()->parse_value());
+							std::shared_ptr<const paludis::Contents> contents((*v)->contents());
 							std::shared_ptr<const paludis::PackageDepSpec> depSpec = std::make_shared<const paludis::PackageDepSpec>((*v)->uniquely_identifying_spec());
 							OwnerFinder finder(fileName, depSpec, collisions);
 							std::for_each(paludis::indirect_iterator(contents->begin()), paludis::indirect_iterator(contents->end()), paludis::accept_visitor(finder));
@@ -409,8 +409,8 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 //			std::cout << "OldPkgId : " << oldPkgId->canonical_form(paludis::idcf_full) << std::endl;
 			ContentsVisitorForIPFL visitor(hook.get("ROOT"), &installedPkgFilesList);
 			std::for_each(
-				paludis::indirect_iterator(oldPkgId->contents_key()->parse_value()->begin()),
-				paludis::indirect_iterator(oldPkgId->contents_key()->parse_value()->end()),
+				paludis::indirect_iterator(oldPkgId->contents()->begin()),
+				paludis::indirect_iterator(oldPkgId->contents()->end()),
 				paludis::accept_visitor(visitor)
 			);
 		}
