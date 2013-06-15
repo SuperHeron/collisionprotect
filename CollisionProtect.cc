@@ -24,7 +24,7 @@
 #include <sstream>
 
 #include <paludis/paludis.hh>
-#include <paludis/util/make_null_shared_ptr.hh>
+#include <sys/sysinfo.h>
 
 #include <memory>
 #include <typeinfo>
@@ -231,7 +231,7 @@ bool pkgID_has_contents_file(const std::shared_ptr<const paludis::PackageID>& pk
  * @param collisions Collisions map
  * @return whether file has found its owner or not
  */
-bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPackage * collisions)
+bool find_owner(std::mutex & mutex, const paludis::Environment *& env, std::string fileName, FilesByPackage * collisions)
 {
 	bool found_owner = false;
 	for(paludis::EnvironmentImplementation::RepositoryConstIterator r(env->begin_repositories()), r_end(env->end_repositories()); r != r_end; ++r)
@@ -254,7 +254,10 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 							std::shared_ptr<const paludis::Contents> contents((*v)->contents());
 							std::shared_ptr<const paludis::PackageDepSpec> depSpec = std::make_shared<const paludis::PackageDepSpec>((*v)->uniquely_identifying_spec());
 							OwnerFinder finder(fileName, depSpec, collisions);
-							std::for_each(paludis::indirect_iterator(contents->begin()), paludis::indirect_iterator(contents->end()), paludis::accept_visitor(finder));
+							{
+								std::unique_lock<std::mutex> lock(mutex);
+								std::for_each(paludis::indirect_iterator(contents->begin()), paludis::indirect_iterator(contents->end()), paludis::accept_visitor(finder));
+							}
 							found_owner = finder.isFound();
 							if(found_owner)
 							{
@@ -270,6 +273,55 @@ bool find_owner(const paludis::Environment* env, std::string fileName, FilesByPa
 //	if(!found_owner)
 //		std::cout << "File not found : " << fileName << std::endl;
 	return found_owner;
+}
+
+void find_owner_worker(std::mutex & mutex, const paludis::Environment *& env, const std::shared_ptr<const paludis::PackageDepSpec> & depSpec, FSPathList::const_iterator & file, const FSPathList::const_iterator & file_end, FilesByPackage & collisions)
+{
+	while (true)
+	{
+		std::shared_ptr<const std::pair<std::string, bool>> currentFile;
+		{
+			std::unique_lock<std::mutex> lock(mutex);
+			if (file != file_end)
+				currentFile = std::make_shared<const std::pair<std::string, bool>>(*file++);
+		}
+
+		if (!currentFile)
+			return;
+		if(currentFile->second)
+		{
+			if(!find_owner(mutex, env, paludis::stringify(currentFile->first), &collisions))
+			{
+/*
+ * Add file to installing PackageID if orphaned
+ */
+				bool pkgFound = false;
+				{
+					std::unique_lock<std::mutex> lock(mutex);
+					for(FilesByPackage::iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); (fbpIt != fbpIt_end) && !pkgFound; ++fbpIt)
+					{
+						if(paludis::stringify(*(fbpIt->first)) == paludis::stringify(*depSpec))
+						{
+							pkgFound = true;
+							fbpIt->second.push_back(paludis::FSPath(currentFile->first));
+						}
+					}
+					if(!pkgFound)
+					{
+						std::vector<paludis::FSPath> fsPathVector;
+						fsPathVector.push_back(paludis::FSPath(currentFile->first));
+						collisions.insert(std::make_pair(depSpec, fsPathVector));
+					}
+				}
+			}
+//			for(FilesByPackage::const_iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); fbpIt != fbpIt_end; ++fbpIt)
+//			{
+//				std::cout << *(fbpIt->first) << std::endl;
+//				for(std::vector<paludis::FSPath>::const_iterator fs(fbpIt->second.begin()), fs_end(fbpIt->second.end()); fs != fs_end; ++fs)
+//					std::cout << *fs << std::endl;
+//			}
+		}
+	}
 }
 
 /**
@@ -355,7 +407,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 //		std::cout << "Creating PackageDepSpec..." << std::endl;
 		depSpec = std::make_shared<const paludis::PackageDepSpec>(paludis::make_package_dep_spec({ }).package(packageName).version_requirement(paludis::make_named_values<paludis::VersionRequirement>(paludis::n::version_operator() = paludis::vo_equal, paludis::n::version_spec() = versionSpec)).slot_requirement(std::make_shared<paludis::ELikeSlotExactPartialRequirement>(slot, std::make_shared<paludis::ELikeSlotAnyAtAllLockedRequirement>())).in_repository(destination_repo));
 //		std::cout << "PkgDepSpec : " << *depSpec << std::endl;
-		std::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
+		std::shared_ptr<const paludis::PackageIDSequence> pkgIDs((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*depSpec, nullptr, paludis::MatchPackageOptions()) |
 																				paludis::filter::And(
 																					paludis::filter::InstalledAtRoot(env->preferred_root_key()->parse_value()),
 																					paludis::filter::Slot(slot)))]);
@@ -377,7 +429,7 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 //		std::cout << "Getting list of files of possibly old package version..." << std::endl;
 		oldDepSpec = std::make_shared<const paludis::PackageDepSpec>(paludis::make_package_dep_spec({ }).package(packageName).slot_requirement(std::make_shared<paludis::ELikeSlotExactPartialRequirement>(slot, std::make_shared<paludis::ELikeSlotAnyAtAllLockedRequirement>())).in_repository(destination_repo));
 //		std::cout << "OldPkgDepSpec before search : " << *oldDepSpec << std::endl;
-		std::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, paludis::make_null_shared_ptr(), paludis::MatchPackageOptions()) |
+		std::shared_ptr<const paludis::PackageIDSequence> oldPkgSeq((*env)[paludis::selection::AllVersionsSorted(paludis::generator::Matches(*oldDepSpec, nullptr, paludis::MatchPackageOptions()) |
 																					paludis::filter::And(
 																						paludis::filter::InstalledAtRoot(env->preferred_root_key()->parse_value()),
 																						paludis::filter::Slot(slot)))]);
@@ -443,38 +495,15 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 /*
  * Find owners of existing files (this can take a while)
  */
-			for(FSPathList::iterator file(imageFileList.begin()), file_end(imageFileList.end()); file != file_end; ++file)
+			std::mutex mutex;
+			FSPathList::const_iterator file(imageFileList.begin()), file_end(imageFileList.end());
 			{
-				if(file->second)
-				{
-					if(!find_owner(env, paludis::stringify(file->first), &collisions))
-					{
-/*
- * Add file to installing PackageID if orphaned
- */
-						bool pkgFound = false;
-						for(FilesByPackage::iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); (fbpIt != fbpIt_end) && !pkgFound; ++fbpIt)
-						{
-							if(paludis::stringify(*(fbpIt->first)) == paludis::stringify(*depSpec))
-							{
-								pkgFound = true;
-								fbpIt->second.push_back(paludis::FSPath(file->first));
-							}
-						}
-						if(!pkgFound)
-						{
-							std::vector<paludis::FSPath> vector;
-							vector.push_back(paludis::FSPath(file->first));
-							collisions.insert(std::make_pair(depSpec, vector));
-						}
-					}
-//					for(FilesByPackage::const_iterator fbpIt(collisions.begin()), fbpIt_end(collisions.end()); fbpIt != fbpIt_end; ++fbpIt)
-//					{
-//						std::cout << *(fbpIt->first) << std::endl;
-//						for(std::vector<paludis::FSPath>::const_iterator fs(fbpIt->second.begin()), fs_end(fbpIt->second.end()); fs != fs_end; ++fs)
-//							std::cout << *fs << std::endl;
-//					}
-				}
+				paludis::ThreadPool pool;
+				int n_procs(get_nprocs());
+				if (n_procs < 1)
+					n_procs = 1;
+				for (int n(0), n_end(n_procs) ; n != n_end ; ++n)
+					pool.create_thread(std::bind(&find_owner_worker, std::ref(mutex), std::ref(env), std::cref(depSpec), std::ref(file), std::cref(file_end), std::ref(collisions)));
 			}
 /*
  * Show each package and files involved in collision and abort installation
