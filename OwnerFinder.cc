@@ -49,9 +49,9 @@ void OwnerFinder::find(const paludis::FSPath & fsPath)
 		}
 		if(!pkgFound)
 		{
-			std::vector<paludis::FSPath> vector;
-			vector.push_back(fsPath);
-			this->collisions->insert(std::make_pair(this->depSpec, vector));
+			std::vector<paludis::FSPath> fsPathVector;
+			fsPathVector.push_back(fsPath);
+			this->collisions->insert(std::make_pair(this->depSpec, fsPathVector));
 		}
 	}
 }
