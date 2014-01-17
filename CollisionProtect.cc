@@ -24,9 +24,9 @@
 #include <sstream>
 
 #include <paludis/paludis.hh>
-#include <sys/sysinfo.h>
 
 #include <memory>
+#include <thread>
 #include <typeinfo>
 
 #include "pstream.h"
@@ -509,8 +509,8 @@ paludis::HookResult paludis_hook_run_3(const paludis::Environment* env, const pa
 			FSPathList::const_iterator file(imageFileList.begin()), file_end(imageFileList.end());
 			{
 				paludis::ThreadPool pool;
-				int n_procs(get_nprocs());
-				if (n_procs < 1)
+				unsigned int n_procs(std::thread::hardware_concurrency());
+				if (n_procs == 0)
 					n_procs = 1;
 				for (int n(0), n_end(n_procs) ; n != n_end ; ++n)
 				{
